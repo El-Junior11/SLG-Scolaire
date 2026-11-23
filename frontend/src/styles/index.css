@@ -1,76 +1,20 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
-/* ===== Thème : toutes les couleurs des composants personnalisés passent par ces variables ===== */
-:root{
-  --fond:#f5f7fc;--surface:#fff;--surface-2:#f8faff;--survol:#fafcff;--trait:#e7ecf4;--trait-doux:#edf1f7;
-  --texte:#152445;--titre:#10234c;--texte-2:#7887a0;--entete-tableau:#8290a7;--label:#465575;
-  --champ-bord:#dce5f1;--focus:#dceafe;--doux:#edf3ff;--doux-texte:#1b56bc;--doux-survol:#dae8ff;
-  --succes-fond:#e9f8ee;--succes:#168346;--ombre:rgba(22,49,92,.035);--defile:#c5d0e4;
-  color-scheme:light;
-}
-[data-theme=dark]{
-  --fond:#0a1224;--surface:#111c33;--surface-2:#16233f;--survol:#16233f;--trait:#22314f;--trait-doux:#1d2a46;
-  --texte:#dbe5f7;--titre:#f1f5ff;--texte-2:#92a3c2;--entete-tableau:#92a3c2;--label:#b7c5de;
-  --champ-bord:#2b3b5c;--focus:#1e3a6e;--doux:#1a2b4d;--doux-texte:#8db5ff;--doux-survol:#23386a;
-  --succes-fond:#12301f;--succes:#4ade80;--ombre:rgba(0,0,0,.35);--defile:#2b3b5c;
-  color-scheme:dark;
+@theme {
+  --color-marron: #540916;
+  --color-marron-hover: #74172A;
+  --color-marron-fonce: #35050E;
+  --color-primaire: #172B50;
+  --color-college: #D9799A;
+  --color-lycee: #26865B;
+  --color-fond: #FAF9F8;
+
+  --font-sans: 'Manrope', sans-serif;
+  --font-editorial: 'Playfair Display', Georgia, serif;
 }
 
-:root{font-family:Manrope,sans-serif;color:var(--texte);background:var(--fond);font-synthesis:none}
-*{box-sizing:border-box}body{margin:0;background:var(--fond);transition:background-color .2s}
-button,input,select,textarea{font:inherit}button{cursor:pointer}a{text-decoration:none}button:disabled{opacity:.55;cursor:not-allowed}
-:focus-visible{outline:2px solid #3576ee;outline-offset:2px}
-::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--defile);border-radius:8px}
-
-.carte{background:var(--surface);border:1px solid var(--trait);border-radius:18px;box-shadow:0 7px 24px var(--ombre)}
-.champ{width:100%;border:1px solid var(--champ-bord);border-radius:11px;padding:11px 13px;background:var(--surface);color:var(--texte);outline:none;font-size:13px}
-.champ::placeholder{color:var(--texte-2)}.champ:focus{border-color:#3576ee;box-shadow:0 0 0 3px var(--focus)}
-.bouton{border-radius:11px;background:#2367e8;color:white;padding:11px 17px;font-size:13px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;gap:8px}
-.bouton:hover{background:#1555cf}
-.bouton-secondaire{background:var(--doux);color:var(--doux-texte)}.bouton-secondaire:hover{background:var(--doux-survol)}
-.bouton-theme{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:11px;background:var(--doux);color:var(--doux-texte)}
-.bouton-theme:hover{background:var(--doux-survol)}
-.etiquette{font-size:11px;padding:5px 9px;border-radius:30px;background:var(--succes-fond);color:var(--succes);font-weight:800}
-.titre-page{font-size:25px;font-weight:800;letter-spacing:-.9px;color:var(--titre)}
-.texte-secondaire{color:var(--texte-2);font-size:13px}
-.tableau{width:100%;border-collapse:collapse;text-align:left;min-width:700px}
-.tableau th{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--entete-tableau);background:var(--surface-2);padding:14px}
-.tableau td{font-size:12px;padding:14px;border-top:1px solid var(--trait-doux)}.tableau tr:hover td{background:var(--survol)}
-.entree-label{display:block;font-size:12px;font-weight:800;color:var(--label);margin-bottom:6px}
-.fond-auth{background:radial-gradient(circle at 15% 10%,#e8f2ff,transparent 40%),#f5f8ff}
-
-/* ===== Mode sombre : surcharges des classes Tailwind à couleur fixe ===== */
-[data-theme=dark] .fond-auth{background:radial-gradient(circle at 15% 10%,#12264d,transparent 45%),#0a1224}
-[data-theme=dark] .bg-white,[data-theme=dark] .bg-white\/95{background-color:var(--surface)}
-[data-theme=dark] .bg-white\/95{background-color:rgba(17,28,51,.92)}
-[data-theme=dark] .bg-\[\#f6f8fc\],[data-theme=dark] .bg-\[\#f5f7fc\],[data-theme=dark] .bg-\[\#f5f8ff\],[data-theme=dark] .bg-slate-50{background-color:var(--fond)}
-[data-theme=dark] .bg-blue-50,[data-theme=dark] .bg-\[\#e6efff\]{background-color:var(--doux)}
-[data-theme=dark] .bg-amber-50{background-color:#33260f}
-[data-theme=dark] .border-\[\#e8edf6\],[data-theme=dark] .border-slate-100{border-color:var(--trait)}
-[data-theme=dark] .from-\[\#f3f8ff\]{--tw-gradient-from:#0f1a33}
-[data-theme=dark] .via-white{--tw-gradient-via:#0c1630}
-[data-theme=dark] .to-\[\#eaf2ff\]{--tw-gradient-to:#0a1224}
-[data-theme=dark] :is(.text-\[\#14254b\],.text-\[\#0e2c64\],.text-\[\#102b62\],.text-\[\#112a5a\],.text-\[\#122d60\],.text-\[\#173367\],.text-\[\#142b58\],.text-\[\#1d3d78\],.text-\[\#0b1836\]){color:var(--titre)}
-[data-theme=dark] :is(.text-slate-400,.text-slate-500,.text-slate-600,.text-\[\#8a98af\],.text-\[\#9aa6b9\],.text-\[\#687a98\]){color:var(--texte-2)}
-[data-theme=dark] :is(.text-blue-600,.text-blue-700,.text-blue-800,.text-\[\#2670e9\]){color:#8db5ff}
-[data-theme=dark] .text-amber-800{color:#fbbf24}
-[data-theme=dark] .carte [style*="background"]{background:rgba(96,165,250,.14)!important}
-[data-theme=dark] .bg-\[\#0b1836\]\/60{background-color:rgba(2,6,16,.75)}
-
-/* Graphiques Recharts */
-[data-theme=dark] .recharts-text,[data-theme=dark] .recharts-legend-item-text{fill:var(--texte-2)!important;color:var(--texte-2)!important}
-[data-theme=dark] .recharts-default-tooltip{background:var(--surface)!important;border-color:var(--trait)!important}
-[data-theme=dark] .recharts-tooltip-item,[data-theme=dark] .recharts-tooltip-label{color:var(--texte)!important}
-
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
-@media print{.pas-impression{display:none!important}body{background:white}.carte{box-shadow:none}}
-
-/* SLG V2 : disposition et adaptation mobile */
-.surface-slg,.navbar-slg{background:var(--surface);color:var(--texte)}.navbar-slg{border-bottom:1px solid var(--trait)}.border-slg{border-color:var(--trait)}
-.sidebar-slg{background:linear-gradient(165deg,#0d2d65,#0a204a);color:#fff}.sidebar-lien{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;font-size:12px;font-weight:750;color:#d8e7ff;transition:.2s}.sidebar-lien:hover{background:#ffffff16}.sidebar-actif{background:#2a70ee!important;color:white;box-shadow:0 6px 16px #061a4470}
-.badge-demo{font-size:10px;font-weight:800;letter-spacing:.09em;padding:7px 10px;border-radius:20px;background:var(--doux);color:var(--doux-texte)}.avatar-slg{height:34px;width:34px;display:grid;place-items:center;border-radius:50%;background:var(--doux);color:var(--doux-texte)}
-@media(max-width:639px){.tableau-adaptatif .tableau{min-width:0;width:100%;display:block}.tableau-adaptatif thead{display:none}.tableau-adaptatif tbody{display:grid;gap:12px;padding:12px}.tableau-adaptatif tr{display:block;border:1px solid var(--trait);border-radius:13px;background:var(--surface);overflow:hidden}.tableau-adaptatif td{display:flex;align-items:start;justify-content:space-between;gap:12px;padding:10px 12px;font-size:12px;border:0;border-bottom:1px solid var(--trait-doux);text-align:right;overflow-wrap:anywhere}.tableau-adaptatif td:last-child{border-bottom:0}.tableau-adaptatif td:before{content:attr(data-label);font-weight:800;color:var(--texte-2);text-align:left;flex:0 0 42%}.tableau-adaptatif td[colspan]{display:block;text-align:center}.tableau-adaptatif td[colspan]:before{display:none}}
-@media print{.sidebar-slg,.navbar-slg,footer,.pas-impression{display:none!important}main{padding:0!important}.lg\:ml-\[258px\]{margin-left:0!important}}
-
-.bulletin-a4{width:min(100%,210mm);min-height:265mm}@media print{@page{size:A4;margin:12mm}.bulletin-a4{width:100%;min-height:0;box-shadow:none!important;border:0!important}body *{visibility:hidden} .bulletin-a4,.bulletin-a4 *{visibility:visible}.bulletin-a4{position:absolute;top:0;left:0}}
+:root { color-scheme: light; }
+html { scroll-behavior: smooth; }
+body { margin: 0; font-family: var(--font-sans); background: var(--color-fond); }
+#root { min-height: 100vh; }

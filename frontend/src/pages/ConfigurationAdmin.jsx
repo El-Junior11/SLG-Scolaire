@@ -1,3 +1,6 @@
+import ConfigurationEcheance from "./ConfigurationEcheance";
+import TarifsScolaires from "../econome/TarifsScolaires";
+import ConfigurationMenu from "./ConfigurationMenu";
 import { useEffect, useState } from 'react';
 import { messageErreur, requetePrivee } from '../services/authentification';
 
@@ -57,6 +60,9 @@ export default function ConfigurationAdmin() {
 
   return <section className="space-y-5">
     <h1 className="titre-page">Configuration</h1>
+    <TarifsScolaires modifiable />
+    <ConfigurationEcheance />
+    <ConfigurationMenu />
     {erreur && <p role="alert" className="text-red-600">{erreur}</p>}
     {message && <p role="status">{message}</p>}
     {!etablissement && !erreur && <p role="status">Chargement…</p>}

@@ -1,6 +1,15 @@
 export const ETABLISSEMENT='Saint Louis de Gonzague Mahasoabe';
-export const ROLES={secretaire:'Secrétaire (Admin)',econome:'Économe',titulaire:'Titulaire de classe'};
+export const ROLES={admin:"Administrateur",secretaire:'Secrétaire',econome:'Économe',titulaire:'Titulaire de classe'};
 export const NAVIGATION={
+ admin:[
+  ['tableau-de-bord','Tableau de bord','LayoutDashboard'],
+  ['eleves','Élèves','Users'],
+  ['classes','Classes','School'],
+  ['annees-scolaires','Années scolaires','CalendarDays'],
+  ['rapports','Rapports','BarChart3'],
+  ['demandes','Demandes d’accès','UserCog'],
+  ['configuration','Configuration','Settings'],
+ ],
  secretaire:[['tableau-de-bord','Tableau de bord','LayoutDashboard'],['eleves','Élèves','Users'],['classes','Classes','School'],['annees-scolaires','Années scolaires','CalendarDays'],['utilisateurs','Utilisateurs','UserCog'],['rapports','Rapports','BarChart3'],['parametres','Paramètres','Settings']],
  econome:[['tableau-de-bord','Tableau de bord','LayoutDashboard'],['eleves','Élèves','Users'],['inscriptions','Inscriptions','ClipboardList'],['frais-scolaires','Frais scolaires','Wallet'],['paiements','Paiements','CreditCard'],['impayes','Impayés','AlertCircle'],['recus','Reçus','Receipt'],['rapports-financiers','Rapports financiers','BarChart3']],
  titulaire:[['tableau-de-bord','Tableau de bord','LayoutDashboard'],['ma-classe','Ma classe','Users'],['matieres','Matières','BookOpen'],['evaluations','Évaluations','ClipboardList'],['notes','Notes','Pencil'],['moyennes','Moyennes','Calculator'],['classements','Classements','Trophy'],['bulletins','Bulletins','FileText'],['rapports-pedagogiques','Rapports pédagogiques','BarChart3']]

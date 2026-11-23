@@ -1,0 +1,6 @@
+import { Link } from "react-router-dom";
+import { Bell, Menu, UserRound } from "lucide-react";
+import { BoutonTheme } from "../contextes/ContexteTheme";
+export default function Navbar({ ouvrir, role, utilisateur }) {
+  return <header className="navbar-slg sticky top-0 z-20 flex items-center justify-between gap-3 px-4 md:px-7 h-[68px]"><div className="flex items-center gap-3"><button aria-label="Ouvrir le menu" onClick={ouvrir} className="lg:hidden"><Menu size={22}/></button><div><div className="font-extrabold text-sm md:text-base">Gestion de scolarité</div><p className="texte-secondaire hidden sm:block">Espace {role} · Année scolaire 2026–2027</p></div></div><div className="flex items-center gap-3"><span className="badge-demo hidden md:inline-flex">DÉMONSTRATION</span><BoutonTheme/><Link aria-label="Notifications" to={`/${role}/notifications`}><Bell size={19}/></Link><Link to={`/${role}/profil`} className="flex items-center gap-2"><span className="avatar-slg"><UserRound size={18}/></span><span className="hidden xl:inline text-xs font-bold">{utilisateur.nom}</span></Link></div></header>;
+}

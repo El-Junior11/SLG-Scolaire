@@ -1,0 +1,1 @@
+export default function EntetePage({titre,description,action}){return <div className="flex flex-wrap justify-between items-center gap-3 mb-5"><div><h1 className="titre-page">{titre}</h1><p className="texte-secondaire mt-1">{description}</p></div>{action}</div>}

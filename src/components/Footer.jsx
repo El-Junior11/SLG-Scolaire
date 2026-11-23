@@ -1,0 +1,1 @@
+export default function Footer(){return <footer className="text-center py-5 px-4 text-xs texte-secondaire">© 2026 Saint Louis de Gonzague Mahasoabe · Interface de démonstration</footer>}

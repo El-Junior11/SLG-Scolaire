@@ -1,0 +1,1 @@
+import * as Icons from "lucide-react";export default function Icone({nom,taille=18,...props}){const I=Icons[nom]||Icons.Circle;return <I size={taille} {...props}/>;}

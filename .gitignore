@@ -5,3 +5,11 @@ dist/
 !.env.example
 *.log
 .DS_Store
+
+# Cache Vite
+.vite/
+**/.vite/
+
+# Dépendances et compilation
+node_modules/
+dist/

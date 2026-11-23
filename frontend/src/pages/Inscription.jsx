@@ -1,45 +1,85 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import Swal from "sweetalert2";
-import Icone from "../components/Icone";
-import { ROLES } from "../donnees/configuration";
+import { api } from '../services/api';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import Icone from '../components/Icone';
+import { createUserWithEmailAndPassword, sendEmailVerification, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { authentification, messageErreur, requetePrivee } from '../services/authentification';
 
 export default function Inscription() {
-  const [formulaire, definirFormulaire] = useState({
-    nom: "", prenom: "", email: "", role: "",
-    motDePasse: "", confirmation: ""
-  });
   const [visible, definirVisible] = useState(false);
   const [visibleConfirmation, definirVisibleConfirmation] = useState(false);
-  const [chargement, definirChargement] = useState(false);
+  const [message, definirMessage] = useState('');
+  const [erreur, definirErreur] = useState('');
+  const [enCours, definirEnCours] = useState(false);
 
-  const modifier = e => {
-    definirFormulaire(prev => ({ ...prev, [e.target.name]: e.target.value }));
-  };
+  const [fonctions, definirFonctions] = useState(null);
 
-  const soumettre = async e => {
-    e.preventDefault();
-    if (formulaire.motDePasse !== formulaire.confirmation) {
-      return Swal.fire({
-        icon: "error",
-        title: "Mots de passe différents",
-        text: "Veuillez vérifier la confirmation du mot de passe.",
-        confirmButtonColor: "#540916"
-      });
+  useEffect(() => {
+    const controleur = new AbortController();
+    api.get('/configuration', { signal: controleur.signal })
+      .then(({ data }) => definirFonctions(data.fonctions))
+      .catch(cause => { if (!controleur.signal.aborted) definirErreur(messageErreur(cause)); });
+    return () => controleur.abort();
+  }, []);
+
+  async function soumettre(evenement) {
+    evenement.preventDefault();
+    const formulaire = evenement.currentTarget;
+    const champs = new FormData(formulaire);
+    const email = champs.get('email').trim();
+    const motDePasse = champs.get('password');
+    const nomComplet = [champs.get('prenom').trim(), champs.get('nom').trim()].join(' ').trim();
+    definirErreur('');
+    definirMessage('');
+    if (!champs.get('prenom').trim() || !champs.get('nom').trim() || nomComplet.length > 120) {
+      definirErreur('Saisissez un prénom et un nom de 120 caractères maximum au total.');
+      return;
+    }
+    if (motDePasse !== champs.get('confirmation')) {
+      definirErreur('Les mots de passe doivent correspondre.');
+      return;
     }
 
-    definirChargement(true);
+    definirEnCours(true);
+    let auth;
+    let compte;
     try {
-      await Swal.fire({
-        icon: "info",
-        title: "Demande simulée",
-        text: "Aucune demande n'a été envoyée au backend pour le moment.",
-        confirmButtonColor: "#540916"
+      auth = authentification();
+      const { user } = await createUserWithEmailAndPassword(auth, email, motDePasse).catch(cause => {
+        if (cause.code !== 'auth/email-already-in-use') throw cause;
+        return signInWithEmailAndPassword(auth, email, motDePasse);
       });
+      compte = user;
+      const { statut } = await requetePrivee('/auth/demandes', {
+        method: 'POST',
+        data: { nom: nomComplet, fonctionId: champs.get('fonction') },
+      }, user);
+      if (statut === 'refuse') {
+        definirMessage('Votre demande a été refusée. Contactez l’administration.');
+      } else {
+        definirMessage(statut === 'approuve' ? 'Votre demande est déjà approuvée.' : 'Votre demande attend l’approbation de l’administrateur.');
+        if (!user.emailVerified) {
+          try {
+            await sendEmailVerification(user);
+            definirMessage(message => `${message} Vérifiez aussi votre boîte e-mail pour confirmer votre adresse.`);
+          } catch {
+            definirErreur('E-mail de confirmation indisponible. Réessayez avec les mêmes identifiants.');
+          }
+        }
+      }
+      formulaire.reset();
+    } catch (cause) {
+      definirErreur(messageErreur(cause));
     } finally {
-      definirChargement(false);
+      try {
+        if (compte && auth.currentUser === compte) await signOut(auth);
+      } catch (cause) {
+        definirErreur(messageErreur(cause));
+      } finally {
+        definirEnCours(false);
+      }
     }
-  };
+  }
 
   const champ = "h-10 w-full rounded-lg border border-[#D1D1D1] bg-white px-3 text-[12px] font-medium text-black outline-none transition placeholder:text-[#A0A0A0] focus:border-[#540916] focus:ring-2 focus:ring-[#F5E7EB]";
   const label = "mb-1 block text-[11px] font-bold text-black";
@@ -119,7 +159,7 @@ export default function Inscription() {
               {/* TITRE */}
               <div className="mb-3">
                 <h1 className="font-editorial text-[29px] font-semibold text-[#540916] lg:text-[34px]">
-                  Inscription
+                  Créer un compte
                 </h1>
                 <p className="mt-1 text-[11px] leading-5 text-black">
                   Remplissez le formulaire pour demander un accès.
@@ -136,8 +176,6 @@ export default function Inscription() {
                     id="nom"
                     name="nom"
                     type="text"
-                    value={formulaire.nom}
-                    onChange={modifier}
                     placeholder="Votre nom"
                     autoComplete="family-name"
                     required
@@ -152,8 +190,6 @@ export default function Inscription() {
                     id="prenom"
                     name="prenom"
                     type="text"
-                    value={formulaire.prenom}
-                    onChange={modifier}
                     placeholder="Votre prénom"
                     autoComplete="given-name"
                     required
@@ -168,8 +204,6 @@ export default function Inscription() {
                     id="email"
                     name="email"
                     type="email"
-                    value={formulaire.email}
-                    onChange={modifier}
                     placeholder="exemple@etablissement.mg"
                     autoComplete="email"
                     required
@@ -179,20 +213,20 @@ export default function Inscription() {
 
                 {/* RÔLE */}
                 <div className="col-span-2">
-                  <label htmlFor="role" className={label}>Profil demandé</label>
+                  <label htmlFor="fonction" className={label}>Fonction demandée</label>
                   <select
-                    id="role"
-                    name="role"
-                    value={formulaire.role}
-                    onChange={modifier}
+                    id="fonction"
+                    name="fonction"
+                    defaultValue=""
+                    disabled={!fonctions?.length}
                     required
-                    className={`${champ} cursor-pointer ${formulaire.role ? "text-black" : "text-[#A0A0A0]"}`}
+                    className={`${champ} cursor-pointer`}
                   >
-                    <option value="" disabled>Sélectionnez votre profil</option>
-                    {Object.entries(ROLES).map(([valeur, nom]) => (
-                      <option key={valeur} value={valeur} className="text-black">
-                        {nom}
-                      </option>
+                    <option value="" disabled>
+                      {fonctions === null && !erreur ? "Chargement des fonctions…" : "Sélectionnez votre fonction"}
+                    </option>
+                    {fonctions?.map(fonction => (
+                      <option key={fonction.id} value={fonction.id}>{fonction.nom}</option>
                     ))}
                   </select>
                 </div>
@@ -203,10 +237,8 @@ export default function Inscription() {
                   <div className="relative">
                     <input
                       id="motDePasse"
-                      name="motDePasse"
+                      name="password"
                       type={visible ? "text" : "password"}
-                      value={formulaire.motDePasse}
-                      onChange={modifier}
                       placeholder="8 caractères min."
                       autoComplete="new-password"
                       minLength={8}
@@ -232,8 +264,6 @@ export default function Inscription() {
                       id="confirmation"
                       name="confirmation"
                       type={visibleConfirmation ? "text" : "password"}
-                      value={formulaire.confirmation}
-                      onChange={modifier}
                       placeholder="Confirmer"
                       autoComplete="new-password"
                       minLength={8}
@@ -251,14 +281,18 @@ export default function Inscription() {
                   </div>
                 </div>
 
+                {fonctions?.length === 0 && <p className="col-span-2 text-sm">Aucune fonction ouverte aux demandes.</p>}
+                {erreur && <p role="alert" className="col-span-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{erreur}</p>}
+                {message && <p role="status" className="col-span-2 rounded-lg bg-[#F8EEF0] px-3 py-2 text-sm text-[#540916]">{message}</p>}
+
                 {/* BOUTON */}
                 <button
                   type="submit"
-                  disabled={chargement}
+                  disabled={enCours || !fonctions?.length}
                   className="col-span-2 mt-1 flex h-10 items-center justify-center gap-2 rounded-lg bg-[#540916] text-[12px] font-extrabold text-white transition hover:bg-[#74172A] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {chargement ? "Traitement..." : "Demander un accès"}
-                  {!chargement && <Icone nom="ArrowRight" taille={15}/>}
+                  {enCours ? "Envoi…" : "Demander un accès"}
+                  {!enCours && <Icone nom="ArrowRight" taille={15}/>}
                 </button>
               </form>
 

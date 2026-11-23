@@ -1,6 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Icone from "../components/Icone";
+import { utiliserAuthentification } from "../contextes/ContexteAuthentification";
+import { api } from "../services/api";
+import { destination } from "../services/authentification";
 import { ETABLISSEMENT } from "../donnees/configuration";
 
 const navigation = [
@@ -48,6 +51,23 @@ export default function Accueil() {
   const [cycleActif, setCycleActif] = useState(0);
   const fermerMenu = () => setMenuOuvert(false);
   const cycle = cycles[cycleActif];
+  const [etablissement, definirEtablissement] = useState({ nom: ETABLISSEMENT });
+  const { utilisateur } = utiliserAuthentification();
+  const lienEspace = utilisateur ? destination(utilisateur) : "/connexion";
+  const libelleEspace = utilisateur ? "Ouvrir le tableau de bord" : "Accéder à mon espace";
+  const libelleConnexion = utilisateur ? "Tableau de bord" : "Se connecter";
+
+  useEffect(() => {
+    const controleur = new AbortController();
+    api.get("/configuration", { signal: controleur.signal })
+      .then(({ data }) => {
+        if (!controleur.signal.aborted && data.etablissement?.nom) {
+          definirEtablissement(data.etablissement);
+        }
+      })
+      .catch(() => { /* L’accueil conserve le nom par défaut si l’API est indisponible. */ });
+    return () => controleur.abort();
+  }, []);
 
   return (
     <div className="min-h-screen overflow-x-clip bg-white font-sans text-[#302429]">
@@ -57,14 +77,13 @@ export default function Accueil() {
         <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between gap-4 px-4 md:px-8">
           <Link to="/" onClick={fermerMenu} className="flex min-w-0 items-center gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-marron text-white shadow-sm">
-              <Icone nom="GraduationCap" taille={25}/>
+              {etablissement.logo
+                ? <img src={etablissement.logo} alt="" referrerPolicy="no-referrer" className="h-6 w-6 object-contain" />
+                : <Icone nom="GraduationCap" taille={25}/>}
             </div>
             <div className="min-w-0 leading-tight">
               <span className="block text-[12px] font-extrabold tracking-tight sm:text-[13px]">
-                Saint Louis de Gonzague
-              </span>
-              <span className="mt-1 block text-[10px] font-extrabold tracking-[.19em] text-marron">
-                MAHASOABE
+                {etablissement.nom}
               </span>
             </div>
           </Link>
@@ -81,9 +100,9 @@ export default function Accueil() {
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
-            <Link to="/connexion"
+            <Link to={lienEspace}
               className="hidden items-center gap-2 rounded-xl bg-marron px-5 py-2.5 text-xs font-extrabold text-white transition hover:bg-marron-hover sm:inline-flex">
-              Espace personnel <Icone nom="ArrowUpRight" taille={16}/>
+              {libelleConnexion} <Icone nom="ArrowUpRight" taille={16}/>
             </Link>
             <button type="button" onClick={() => setMenuOuvert(!menuOuvert)}
               aria-label={menuOuvert ? "Fermer le menu" : "Ouvrir le menu"}
@@ -104,9 +123,9 @@ export default function Accueil() {
             ))}
             <Link to="/apropos" onClick={fermerMenu} className="px-3 py-3 text-sm font-bold">À propos</Link>
             <Link to="/contact" onClick={fermerMenu} className="px-3 py-3 text-sm font-bold">Contact</Link>
-            <Link to="/connexion" onClick={fermerMenu}
+            <Link to={lienEspace} onClick={fermerMenu}
               className="mt-2 rounded-xl bg-marron px-5 py-3 text-center text-sm font-bold text-white sm:hidden">
-              Se connecter
+              {libelleConnexion}
             </Link>
           </nav>
         )}
@@ -117,13 +136,13 @@ export default function Accueil() {
         <div className="mx-auto grid max-w-[1440px] lg:min-h-[490px] lg:grid-cols-[49%_51%]">
 
           <div className="relative min-h-[280px] overflow-hidden bg-[#E9DDDA] sm:min-h-[360px] lg:min-h-[490px]">
-            <img src="/images/ecole-accueil.jpg" alt={`Établissement ${ETABLISSEMENT}`}
+            <img src="/images/ecole-accueil.jpg" alt={`Établissement ${etablissement.nom}`}
               className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 hover:scale-[1.03]"/>
             <div className="absolute inset-0 bg-gradient-to-t from-[#27050D]/65 via-transparent to-transparent"/>
             <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-3 sm:bottom-7 sm:left-8">
               <div className="text-white">
                 <span className="text-[10px] font-bold uppercase tracking-[.2em] text-white/80">Notre établissement</span>
-                <p className="mt-1 text-sm font-extrabold">{ETABLISSEMENT}</p>
+                <p className="mt-1 text-sm font-extrabold">{etablissement.nom}</p>
               </div>
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/40 bg-white/15 text-white backdrop-blur">
                 <Icone nom="GraduationCap" taille={20}/>
@@ -144,15 +163,15 @@ export default function Accueil() {
             </h1>
 
             <p className="mt-5 max-w-[560px] text-[13px] leading-7 text-[#766B6E] sm:text-[14px]">
-              Bienvenue à {ETABLISSEMENT}. Une plateforme de gestion scolaire
+              Bienvenue à {etablissement.nom}. Une plateforme de gestion scolaire
               moderne qui facilite l'administration, le suivi financier et
               l'accompagnement pédagogique au quotidien.
             </p>
 
             <div className="mt-7 flex flex-wrap gap-3">
-              <Link to="/connexion"
+              <Link to={lienEspace}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-marron px-5 py-3 text-xs font-extrabold text-white transition hover:bg-marron-hover">
-                Accéder à mon espace <Icone nom="ArrowUpRight" taille={17}/>
+                {libelleEspace} <Icone nom="ArrowUpRight" taille={17}/>
               </Link>
               <a href="#presentation"
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#E3CFD3] bg-white px-5 py-3 text-xs font-extrabold text-marron transition hover:bg-[#F7EDEF]">
@@ -186,7 +205,7 @@ export default function Accueil() {
           </div>
           <div>
             <p className="text-[13px] leading-8 text-[#746A6D] sm:text-sm">
-              De l'enseignement primaire au lycée, {ETABLISSEMENT} accompagne
+              De l'enseignement primaire au lycée, {etablissement.nom} accompagne
               les élèves tout au long de leur parcours scolaire. Notre organisation
               associe le suivi administratif, la gestion financière et les outils
               pédagogiques pour soutenir le fonctionnement de l'établissement.
@@ -311,7 +330,7 @@ export default function Accueil() {
 
           <div className="grid gap-4 md:grid-cols-3">
             {espaces.map((espace, index) => (
-              <Link key={espace.nom} to="/connexion"
+              <Link key={espace.nom} to={lienEspace}
                 className="group flex items-start gap-4 rounded-2xl border border-[#EDE3E4] bg-white p-5 transition hover:border-[#D9B8C0] hover:shadow-md">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F7EDEF] text-marron">
                   <Icone nom={espace.icone} taille={22}/>
@@ -343,9 +362,9 @@ export default function Accueil() {
               Connectez-vous pour accéder à vos outils de gestion.
             </p>
           </div>
-          <Link to="/connexion"
+          <Link to={lienEspace}
             className="inline-flex shrink-0 items-center gap-3 rounded-xl bg-white px-6 py-3.5 text-xs font-extrabold text-marron transition hover:bg-[#F7EDEF]">
-            Ouvrir mon espace <Icone nom="ArrowUpRight" taille={18}/>
+            {libelleEspace} <Icone nom="ArrowUpRight" taille={18}/>
           </Link>
         </div>
       </section>
@@ -355,20 +374,21 @@ export default function Accueil() {
         <div className="mx-auto flex max-w-[1320px] flex-col items-center justify-between gap-4 px-5 py-7 text-center md:flex-row md:px-8 md:text-left">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white">
-              <Icone nom="GraduationCap" taille={20}/>
+              {etablissement.logo
+                ? <img src={etablissement.logo} alt="" referrerPolicy="no-referrer" className="h-6 w-6 object-contain" />
+                : <Icone nom="GraduationCap" taille={20}/>}
             </div>
             <div>
-              <p className="text-xs font-extrabold text-white">Saint Louis de Gonzague</p>
-              <p className="mt-1 text-[10px] tracking-widest">MAHASOABE</p>
+              <p className="text-xs font-extrabold text-white">{etablissement.nom}</p>
             </div>
           </div>
           <p className="text-[11px]">
-            © {new Date().getFullYear()} {ETABLISSEMENT} · Plateforme de gestion scolaire
+            © {new Date().getFullYear()} {etablissement.nom} · Plateforme de gestion scolaire
           </p>
           <div className="flex items-center gap-5 text-[11px]">
             <Link to="/apropos" className="hover:text-white">À propos</Link>
             <Link to="/contact" className="hover:text-white">Contact</Link>
-            <Link to="/connexion" className="hover:text-white">Connexion</Link>
+            <Link to={lienEspace} className="hover:text-white">{libelleConnexion}</Link>
           </div>
         </div>
       </footer>

@@ -117,7 +117,7 @@ export default function Accueil() {
         <div className="mx-auto grid max-w-[1440px] lg:min-h-[490px] lg:grid-cols-[49%_51%]">
 
           <div className="relative min-h-[280px] overflow-hidden bg-[#E9DDDA] sm:min-h-[360px] lg:min-h-[490px]">
-            <img src="/images/ecole-accueil.jpg" alt={`Établissement ${ETABLISSEMENT}`}
+            <img src="/images/image.png" alt={`Établissement ${ETABLISSEMENT}`}
               className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 hover:scale-[1.03]"/>
             <div className="absolute inset-0 bg-gradient-to-t from-[#27050D]/65 via-transparent to-transparent"/>
             <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-3 sm:bottom-7 sm:left-8">

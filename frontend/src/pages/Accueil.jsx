@@ -5,14 +5,12 @@ import { utiliserAuthentification } from "../contextes/ContexteAuthentification"
 import { api } from "../services/api";
 import { destination } from "../services/authentification";
 import { ETABLISSEMENT } from "../donnees/configuration";
-
 const navigation = [
   ["Accueil", "#accueil"],
   ["Notre école", "#presentation"],
   ["Cycles scolaires", "#cycles"],
   ["Fonctionnalités", "#fonctionnalites"]
 ];
-
 const cycles = [
   {
     nom: "Primaire", niveau: "Enseignement primaire", couleur: "#172B50",
@@ -30,7 +28,6 @@ const cycles = [
     description: "Un enseignement approfondi pour renforcer les compétences, préparer les examens et construire son avenir."
   }
 ];
-
 const services = [
   ["Users", "Gestion des élèves", "Dossiers, inscriptions et suivi scolaire centralisés."],
   ["Wallet", "Gestion financière", "Frais, paiements, reçus et suivi des impayés."],
@@ -39,13 +36,11 @@ const services = [
   ["BarChart3", "Statistiques claires", "Tableaux de bord et rapports pour chaque service."],
   ["FileText", "Documents scolaires", "Génération et exportation de documents."]
 ];
-
 const espaces = [
   { nom: "Secrétariat", icone: "ClipboardList", description: "Administration, inscriptions et gestion des élèves." },
   { nom: "Économat", icone: "Wallet", description: "Paiements, frais scolaires et suivi financier." },
   { nom: "Enseignants", icone: "BookOpen", description: "Évaluations, notes et bulletins scolaires." }
 ];
-
 export default function Accueil() {
   const [menuOuvert, setMenuOuvert] = useState(false);
   const [cycleActif, setCycleActif] = useState(0);
@@ -56,7 +51,6 @@ export default function Accueil() {
   const lienEspace = utilisateur ? destination(utilisateur) : "/connexion";
   const libelleEspace = utilisateur ? "Ouvrir le tableau de bord" : "Accéder à mon espace";
   const libelleConnexion = utilisateur ? "Tableau de bord" : "Se connecter";
-
   useEffect(() => {
     const controleur = new AbortController();
     api.get("/configuration", { signal: controleur.signal })
@@ -68,10 +62,8 @@ export default function Accueil() {
       .catch(() => { /* L’accueil conserve le nom par défaut si l’API est indisponible. */ });
     return () => controleur.abort();
   }, []);
-
   return (
     <div className="min-h-screen overflow-x-clip bg-white font-sans text-[#302429]">
-
       {/* NAVBAR */}
       <header className="sticky top-0 z-50 border-b border-[#EEE5E5] bg-white/95 backdrop-blur-xl">
         <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between gap-4 px-4 md:px-8">
@@ -87,7 +79,6 @@ export default function Accueil() {
               </span>
             </div>
           </Link>
-
           <nav className="hidden items-center gap-7 lg:flex">
             {navigation.map(([titre, lien]) => (
               <a key={lien} href={lien}
@@ -98,7 +89,6 @@ export default function Accueil() {
             <Link to="/apropos" className="text-[12px] font-bold text-[#5C5053] hover:text-marron">À propos</Link>
             <Link to="/contact" className="text-[12px] font-bold text-[#5C5053] hover:text-marron">Contact</Link>
           </nav>
-
           <div className="flex shrink-0 items-center gap-2">
             <Link to={lienEspace}
               className="hidden items-center gap-2 rounded-xl bg-marron px-5 py-2.5 text-xs font-extrabold text-white transition hover:bg-marron-hover sm:inline-flex">
@@ -112,7 +102,6 @@ export default function Accueil() {
             </button>
           </div>
         </div>
-
         {menuOuvert && (
           <nav className="absolute left-0 right-0 top-full flex flex-col gap-1 border-b border-[#EEE5E5] bg-white px-5 py-4 shadow-xl lg:hidden">
             {navigation.map(([titre, lien]) => (
@@ -130,13 +119,11 @@ export default function Accueil() {
           </nav>
         )}
       </header>
-
       {/* HERO */}
       <section id="accueil" className="scroll-mt-20 bg-[#FAF8F7]">
         <div className="mx-auto grid max-w-[1440px] lg:min-h-[490px] lg:grid-cols-[49%_51%]">
-
           <div className="relative min-h-[280px] overflow-hidden bg-[#E9DDDA] sm:min-h-[360px] lg:min-h-[490px]">
-            <img src="/images/ecole-accueil.jpg" alt={`Établissement ${etablissement.nom}`}
+<img src="/images/image.png" alt={`Établissement ${etablissement.nom}`}
               className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 hover:scale-[1.03]"/>
             <div className="absolute inset-0 bg-gradient-to-t from-[#27050D]/65 via-transparent to-transparent"/>
             <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-3 sm:bottom-7 sm:left-8">
@@ -149,7 +136,6 @@ export default function Accueil() {
               </span>
             </div>
           </div>
-
           <div className="flex min-w-0 flex-col justify-center px-5 py-10 sm:px-10 lg:px-12 lg:py-12 xl:px-16">
             <div className="mb-5 flex items-center gap-3">
               <span className="h-px w-8 bg-marron"/>
@@ -157,17 +143,14 @@ export default function Accueil() {
                 Bienvenue à SLG Mahasoabe
               </span>
             </div>
-
             <h1 className="max-w-[650px] font-editorial text-[35px] font-semibold leading-[1.12] tracking-[-.035em] text-marron sm:text-[45px] xl:text-[59px]">
               Apprendre, grandir et construire son avenir.
             </h1>
-
             <p className="mt-5 max-w-[560px] text-[13px] leading-7 text-[#766B6E] sm:text-[14px]">
               Bienvenue à {etablissement.nom}. Une plateforme de gestion scolaire
               moderne qui facilite l'administration, le suivi financier et
               l'accompagnement pédagogique au quotidien.
             </p>
-
             <div className="mt-7 flex flex-wrap gap-3">
               <Link to={lienEspace}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-marron px-5 py-3 text-xs font-extrabold text-white transition hover:bg-marron-hover">
@@ -178,7 +161,6 @@ export default function Accueil() {
                 Découvrir notre école <Icone nom="ArrowRight" taille={16}/>
               </a>
             </div>
-
             <div className="mt-8 grid grid-cols-3 gap-3 border-t border-[#E8DCDD] pt-5">
               {cycles.map((item, index) => (
                 <button key={item.nom} type="button" onClick={() => {
@@ -193,7 +175,6 @@ export default function Accueil() {
           </div>
         </div>
       </section>
-
       {/* PRÉSENTATION */}
       <section id="presentation" className="scroll-mt-20 bg-white">
         <div className="mx-auto grid max-w-[1320px] items-center gap-6 px-5 py-12 md:grid-cols-2 md:gap-14 md:px-8 md:py-14">
@@ -216,7 +197,6 @@ export default function Accueil() {
           </div>
         </div>
       </section>
-
       {/* CYCLES SCOLAIRES */}
       <section id="cycles" className="scroll-mt-20 bg-[#F8F5F4]">
         <div className="mx-auto max-w-[1320px] px-5 py-12 md:px-8 md:py-14">
@@ -240,7 +220,6 @@ export default function Accueil() {
               ))}
             </div>
           </div>
-
           <div className="mt-8 grid gap-5 lg:grid-cols-[1.15fr_.85fr]">
             <div className="overflow-hidden rounded-2xl border border-[#EAE2E2] bg-white p-6 shadow-sm sm:p-8">
               <div className="flex items-start justify-between gap-4">
@@ -251,20 +230,17 @@ export default function Accueil() {
                 <span className="rounded-full px-3 py-1.5 text-[10px] font-extrabold"
                   style={{ background: cycle.fond, color: cycle.couleur }}>{cycle.nom}</span>
               </div>
-
               <div className="mt-8">
                 <span className="text-[10px] font-extrabold uppercase tracking-[.2em]"
                   style={{ color: cycle.couleur }}>{cycle.niveau}</span>
                 <h3 className="mt-3 font-editorial text-[32px] font-semibold text-[#302429] sm:text-[38px]">{cycle.nom}</h3>
                 <p className="mt-3 max-w-xl text-[13px] leading-7 text-[#776D70]">{cycle.description}</p>
               </div>
-
               <div className="mt-8 h-1.5 w-full overflow-hidden rounded-full bg-[#F0E9EA]">
                 <div className="h-full rounded-full transition-all duration-500"
                   style={{ background: cycle.couleur, width: `${((cycleActif + 1) / cycles.length) * 100}%` }}/>
               </div>
             </div>
-
             <div className="grid gap-3">
               {cycles.map((item, index) => (
                 <button key={item.nom} type="button" onClick={() => setCycleActif(index)}
@@ -286,7 +262,6 @@ export default function Accueil() {
           </div>
         </div>
       </section>
-
       {/* FONCTIONNALITÉS */}
       <section id="fonctionnalites" className="scroll-mt-20 bg-white">
         <div className="mx-auto max-w-[1320px] px-5 py-12 md:px-8 md:py-14">
@@ -299,7 +274,6 @@ export default function Accueil() {
               Une solution numérique pensée pour simplifier le travail quotidien du personnel scolaire.
             </p>
           </div>
-
           <div className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {services.map(([icone, titre, description], index) => (
               <article key={titre}
@@ -317,7 +291,6 @@ export default function Accueil() {
           </div>
         </div>
       </section>
-
       {/* ESPACES PROFESSIONNELS */}
       <section className="bg-[#FAF8F7]">
         <div className="mx-auto max-w-[1320px] px-5 py-12 md:px-8">
@@ -327,7 +300,6 @@ export default function Accueil() {
               Un espace adapté à chaque responsabilité.
             </h2>
           </div>
-
           <div className="grid gap-4 md:grid-cols-3">
             {espaces.map((espace, index) => (
               <Link key={espace.nom} to={lienEspace}
@@ -347,7 +319,6 @@ export default function Accueil() {
           </div>
         </div>
       </section>
-
       {/* CTA */}
       <section className="bg-marron text-white">
         <div className="mx-auto flex max-w-[1320px] flex-col items-start justify-between gap-6 px-5 py-10 md:flex-row md:items-center md:px-8 md:py-12">
@@ -368,7 +339,6 @@ export default function Accueil() {
           </Link>
         </div>
       </section>
-
       {/* FOOTER */}
       <footer className="bg-marron-fonce text-white/75">
         <div className="mx-auto flex max-w-[1320px] flex-col items-center justify-between gap-4 px-5 py-7 text-center md:flex-row md:px-8 md:text-left">

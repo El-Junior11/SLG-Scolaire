@@ -1,5 +1,181 @@
-import { Link } from "react-router-dom";import { Users, School, Wallet, CreditCard, BookOpen, Award, FileText, TrendingUp, AlertCircle, UserCog } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Users, School, Wallet, CreditCard, BookOpen, Award, FileText, AlertCircle, UserCog, ArrowUpRight, GraduationCap, LayoutDashboard } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from "recharts";
-import { lireModule } from "../services/stockageDemonstration";import { utiliserAuthentification } from "../contextes/ContexteAuthentification";import CarteStatistique from "../components/CarteStatistique";
-const couleurs=['#2563eb','#0ea5e9','#16a34a','#f59e0b','#8b5cf6'];
-export default function TableauDeBord(){const {utilisateur}=utiliserAuthentification(),role=utilisateur.role,eleves=lireModule('eleves'),classes=lireModule('classes'),paiements=lireModule('paiements'),notes=lireModule('notes');const inscrits=role==='titulaire'?eleves.filter(e=>e.classe===utilisateur.classe):eleves;const parClasse=classes.map(c=>({name:c.nom,total:eleves.filter(e=>e.classe===c.nom).length}));const parCycle=['Primaire','Collège','Lycée'].map(n=>({name:n,value:classes.filter(c=>c.cycle===n).reduce((a,c)=>a+eleves.filter(e=>e.classe===c.nom).length,0)})).filter(x=>x.value);const recettes=paiements.reduce((a,p)=>a+Number(p.montant||0),0);const cartes=['admin','secretaire'].includes(role)?[['Élèves',eleves.length,Users],['Classes',classes.length,School],['Inscriptions',lireModule('inscriptions').length,FileText],['Utilisateurs',lireModule('utilisateurs').length,UserCog]]:role==='econome'?[['Recettes',recettes.toLocaleString('fr-FR')+' Ar',Wallet],['Paiements',paiements.length,CreditCard],['Impayés',lireModule('impayes').length,AlertCircle],['Élèves',eleves.length,Users]]:[['Élèves de ma classe',inscrits.length,Users],['Évaluations',lireModule('evaluations').length,BookOpen],['Notes saisies',notes.filter(n=>inscrits.some(e=>`${e.nom} ${e.prenom}`===n.eleve)).length,FileText],['Bulletins',lireModule('bulletins').length,Award]];const liens=role==='admin'?[['eleves','Élèves'],['classes','Classes'],['annees-scolaires','Années scolaires'],['demandes','Demandes d’accès']]:role==='secretaire'?[['eleves','Élèves'],['classes','Classes'],['annees-scolaires','Années scolaires'],['utilisateurs','Utilisateurs']]:role==='econome'?[['paiements','Paiements'],['eleves','Élèves'],['impayes','Impayés'],['recus','Reçus']]:[['notes','Notes'],['moyennes','Moyennes'],['classements','Classements'],['bulletins','Bulletins']];return <><div className="rounded-2xl bg-gradient-to-r from-[#123d88] to-[#2675ed] text-white p-6 mb-5"><p className="text-xs text-blue-100 font-bold">SAINT LOUIS DE GONZAGUE MAHASOABE · DÉMONSTRATION</p><h1 className="text-2xl md:text-3xl font-extrabold mt-2">Bienvenue, {utilisateur.nom}</h1><p className="text-sm text-blue-100 mt-2">Vue d'ensemble de votre espace {role}.</p></div><div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 mb-5">{cartes.map(([titre,valeur,icone])=><CarteStatistique key={titre} titre={titre} valeur={valeur} icone={icone}/>)}</div><div className="grid lg:grid-cols-2 gap-4 mb-5"><div className="carte p-5"><h2 className="font-extrabold mb-4">Élèves par classe</h2><div className="h-[250px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={parClasse}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name" tick={{fontSize:11}}/><YAxis allowDecimals={false}/><Tooltip/><Bar dataKey="total" fill="#2563eb" radius={[6,6,0,0]}/></BarChart></ResponsiveContainer></div></div><div className="carte p-5"><h2 className="font-extrabold mb-4">Répartition par cycle</h2><div className="h-[250px]">{parCycle.length?<ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={parCycle} dataKey="value" nameKey="name" innerRadius={55} outerRadius={86} label>{parCycle.map((x,i)=><Cell key={x.name} fill={couleurs[i%couleurs.length]}/>)}</Pie><Tooltip/></PieChart></ResponsiveContainer>:<p className="texte-secondaire">Aucune donnée de cycle disponible.</p>}</div><div className="flex flex-wrap justify-center gap-3">{parCycle.map((x,i)=><span className="texte-secondaire" key={x.name}><span style={{color:couleurs[i%couleurs.length]}}>●</span> {x.name} : {x.value}</span>)}</div></div></div><div className="carte p-5"><h2 className="font-extrabold mb-4">Accès rapide</h2><div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">{liens.map(([url,nom])=><Link className="bouton bouton-secondaire justify-center" key={url} to={`/${role}/${url}`}>{nom} →</Link>)}</div></div></>;}
+import { lireModule } from "../services/stockageDemonstration";
+import { utiliserAuthentification } from "../contextes/ContexteAuthentification";
+
+const cycles = ["Primaire", "Collège", "Lycée"];
+const couleurs = { Primaire: "#172B50", Collège: "#D9799A", Lycée: "#26865B" };
+const carte = "rounded-2xl border border-[#EAE3E5] bg-white shadow-sm dark:border-[#263852] dark:bg-[#14243D]";
+const texte = "text-[#171717] dark:text-white";
+const secondaire = "text-[#667085] dark:text-[#A8B7CF]";
+
+export default function TableauDeBord() {
+  const { utilisateur } = utiliserAuthentification();
+  const role = utilisateur?.role || "secretaire";
+  const eleves = lireModule("eleves");
+  const classes = lireModule("classes");
+  const paiements = lireModule("paiements");
+  const notes = lireModule("notes");
+
+  const inscrits = role === "titulaire" ? eleves.filter(e => e.classe === utilisateur.classe) : eleves;
+  const parClasse = classes.map(c => ({ name: c.nom, total: eleves.filter(e => e.classe === c.nom).length }));
+  const parCycle = cycles.map(n => ({
+    name: n,
+    value: classes.filter(c => c.cycle === n).reduce((a, c) => a + eleves.filter(e => e.classe === c.nom).length, 0)
+  })).filter(x => x.value);
+
+  const recettes = paiements.reduce((a, p) => a + Number(p.montant || 0), 0);
+
+  const cartes = role === "secretaire" ? [
+    ["Élèves", eleves.length, Users, "#172B50"],
+    ["Classes", classes.length, School, "#540916"],
+    ["Inscriptions", lireModule("inscriptions").length, FileText, "#26865B"],
+    ["Utilisateurs", lireModule("utilisateurs").length, UserCog, "#D9799A"]
+  ] : role === "econome" ? [
+    ["Recettes", recettes.toLocaleString("fr-FR") + " Ar", Wallet, "#26865B"],
+    ["Paiements", paiements.length, CreditCard, "#540916"],
+    ["Impayés", lireModule("impayes").length, AlertCircle, "#D9799A"],
+    ["Élèves", eleves.length, Users, "#172B50"]
+  ] : [
+    ["Élèves de ma classe", inscrits.length, Users, "#172B50"],
+    ["Évaluations", lireModule("evaluations").length, BookOpen, "#540916"],
+    ["Notes saisies", notes.filter(n => inscrits.some(e => `${e.nom} ${e.prenom}` === n.eleve)).length, FileText, "#26865B"],
+    ["Bulletins", lireModule("bulletins").length, Award, "#D9799A"]
+  ];
+
+  const liens = role === "secretaire" ? [
+    ["eleves", "Élèves"], ["classes", "Classes"],
+    ["annees-scolaires", "Années scolaires"], ["utilisateurs", "Utilisateurs"]
+  ] : role === "econome" ? [
+    ["paiements", "Paiements"], ["eleves", "Élèves"],
+    ["impayes", "Impayés"], ["recus", "Reçus"]
+  ] : [
+    ["notes", "Notes"], ["moyennes", "Moyennes"],
+    ["classements", "Classements"], ["bulletins", "Bulletins"]
+  ];
+
+  const nomRole = role === "secretaire" ? "Secrétariat" : role === "econome" ? "Économat" : "Espace titulaire";
+
+  return (
+    <div className="space-y-5 font-['Manrope']">
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#540916] to-[#35050E] p-5 text-white sm:p-7 dark:from-[#142B4D] dark:to-[#091629]">
+        <div className="pointer-events-none absolute -right-12 -top-16 h-52 w-52 rounded-full border-[30px] border-white/5" />
+        <div className="relative">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-bold">
+              <LayoutDashboard size={13} /> TABLEAU DE BORD
+            </span>
+            <span className="rounded-full bg-white/10 px-3 py-1.5 text-[10px] font-semibold">{nomRole}</span>
+          </div>
+          <h1 className="text-[25px] font-extrabold tracking-tight sm:text-[32px]">
+            Bienvenue, {utilisateur?.prenom || utilisateur?.nom || "Utilisateur"}
+          </h1>
+          <p className="mt-2 text-[12px] leading-6 text-white/80">
+            Vue d'ensemble de votre espace de gestion scolaire.
+          </p>
+          <div className="mt-5 flex items-center gap-2 border-t border-white/15 pt-4">
+            <GraduationCap size={17} />
+            <span className="text-[10px] font-bold tracking-wide">SAINT LOUIS DE GONZAGUE MAHASOABE</span>
+          </div>
+        </div>
+      </section>
+
+      <div>
+        <h2 className={`text-[17px] font-extrabold ${texte}`}>Vue d'ensemble</h2>
+        <p className={`mt-1 text-[11px] ${secondaire}`}>Statistiques et indicateurs de votre espace.</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        {cartes.map(([titre, valeur, Icone, couleur]) => (
+          <div key={titre} className={`${carte} group p-4 transition-all hover:-translate-y-0.5 hover:shadow-md sm:p-5`}>
+            <div className="mb-4 flex items-start justify-between">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: `${couleur}18`, color: couleur }}>
+                <Icone size={19} strokeWidth={1.9} />
+              </div>
+              <ArrowUpRight size={15} className={secondaire} />
+            </div>
+            <p className={`text-[11px] font-semibold ${secondaire}`}>{titre}</p>
+            <h3 className={`mt-1 break-words text-[20px] font-extrabold sm:text-[24px] ${texte}`}>{valeur}</h3>
+            <div className="mt-4 h-[3px] w-10 rounded-full" style={{ backgroundColor: couleur }} />
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className={`${carte} min-w-0 p-4 sm:p-5`}>
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <h2 className={`text-[14px] font-extrabold ${texte}`}>Élèves par classe</h2>
+              <p className={`mt-1 text-[11px] ${secondaire}`}>Effectif des élèves par classe.</p>
+            </div>
+            <div className="rounded-xl bg-[#540916]/10 p-2.5 text-[#540916] dark:bg-[#29446D] dark:text-[#C4D7FF]">
+              <School size={18} />
+            </div>
+          </div>
+          <div className="h-[260px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={parClasse} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 4" vertical={false} stroke="#DCE2E9" strokeOpacity={0.6} />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#8792A2" }} axisLine={false} tickLine={false} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#8792A2" }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ borderRadius: 10, fontSize: 11 }} />
+                <Bar dataKey="total" name="Élèves" fill="#540916" radius={[5, 5, 0, 0]} maxBarSize={42} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+
+        <section className={`${carte} min-w-0 p-4 sm:p-5`}>
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <h2 className={`text-[14px] font-extrabold ${texte}`}>Répartition par cycle</h2>
+              <p className={`mt-1 text-[11px] ${secondaire}`}>Distribution des élèves par cycle scolaire.</p>
+            </div>
+            <div className="rounded-xl bg-[#540916]/10 p-2.5 text-[#540916] dark:bg-[#29446D] dark:text-[#C4D7FF]">
+              <GraduationCap size={18} />
+            </div>
+          </div>
+          <div className="h-[240px]">
+            {parCycle.length ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={parCycle} dataKey="value" nameKey="name" innerRadius={60} outerRadius={88} paddingAngle={3} strokeWidth={0}>
+                    {parCycle.map(x => <Cell key={x.name} fill={couleurs[x.name]} />)}
+                  </Pie>
+                  <Tooltip contentStyle={{ borderRadius: 10, fontSize: 11 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className={`flex h-full items-center justify-center text-[12px] ${secondaire}`}>
+                Aucune donnée de cycle disponible.
+              </div>
+            )}
+          </div>
+          <div className="flex flex-wrap justify-center gap-4 border-t border-[#EAE3E5] pt-4 dark:border-[#263852]">
+            {parCycle.map(x => (
+              <span key={x.name} className={`flex items-center gap-2 text-[11px] ${secondaire}`}>
+                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: couleurs[x.name] }} />
+                {x.name} : <strong className={texte}>{x.value}</strong>
+              </span>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <section className={`${carte} p-4 sm:p-5`}>
+        <h2 className={`text-[14px] font-extrabold ${texte}`}>Accès rapide</h2>
+        <p className={`mb-4 mt-1 text-[11px] ${secondaire}`}>Accédez aux principales fonctionnalités.</p>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {liens.map(([url, nom]) => (
+            <Link key={url} to={`/${role}/${url}`}
+              className="group flex min-h-[46px] items-center justify-between gap-2 rounded-xl border border-[#EAE3E5] bg-[#FCFAFB] px-4 py-3 text-[11px] font-bold text-[#540916] transition-all hover:border-[#540916] hover:bg-[#540916] hover:text-white dark:border-[#30415C] dark:bg-[#1B2E4A] dark:text-[#D6E4FF] dark:hover:bg-[#29446D]">
+              {nom}
+              <ArrowUpRight size={15} className="shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </Link>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}

@@ -9,7 +9,7 @@ const formatNombre = n => Number(n || 0).toLocaleString("fr-FR");
 
 export default function TableauDeBord() {
   const { utilisateur } = utiliserAuthentification();
-  const role = utilisateur?.role || "secretaire";
+  const role = utilisateur?.role === "admin" ? "econome" : (utilisateur?.role || "econome");
   const eleves = lireModule("eleves");
   const classes = lireModule("classes");
   const paiements = lireModule("paiements");
@@ -44,8 +44,8 @@ export default function TableauDeBord() {
     ["eleves", "Élèves"], ["classes", "Classes"],
     ["annees-scolaires", "Années scolaires"], ["utilisateurs", "Utilisateurs"]
   ] : role === "econome" ? [
-    ["paiements", "Paiements"], ["eleves", "Élèves"],
-    ["impayes", "Impayés"], ["recus", "Reçus"]
+    ["frais-scolaires", "Frais de scolarité"], ["eleves", "Élèves"],
+    ["frais-scolaires/ecolage", "Écolage"], ["frais-scolaires/divers", "Frais divers"]
   ] : [
     ["notes", "Notes"], ["moyennes", "Moyennes"],
     ["classements", "Classements"], ["bulletins", "Bulletins"]

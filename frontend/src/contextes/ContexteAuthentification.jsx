@@ -84,3 +84,12 @@ export function FournisseurAuthentification({ children }) {
 }
 
 export const utiliserAuthentification = () => useContext(Contexte);
+
+export function ClasseAdministration({ classe, children }) {
+  const contexte = utiliserAuthentification();
+  return (
+    <Contexte.Provider value={{ ...contexte, utilisateur: { ...contexte.utilisateur, classe } }}>
+      {children}
+    </Contexte.Provider>
+  );
+}

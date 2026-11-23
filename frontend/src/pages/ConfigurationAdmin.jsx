@@ -1,3 +1,4 @@
+import ConfigurationMatricule from "./ConfigurationMatricule";
 import ConfigurationEcheance from "./ConfigurationEcheance";
 import TarifsScolaires from "../econome/TarifsScolaires";
 import ConfigurationMenu from "./ConfigurationMenu";
@@ -62,6 +63,7 @@ export default function ConfigurationAdmin() {
     <h1 className="titre-page">Configuration</h1>
     <TarifsScolaires modifiable />
     <ConfigurationEcheance />
+    <ConfigurationMatricule />
     <ConfigurationMenu />
     {erreur && <p role="alert" className="text-red-600">{erreur}</p>}
     {message && <p role="status">{message}</p>}

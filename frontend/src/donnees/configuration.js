@@ -11,7 +11,7 @@ export const NAVIGATION={
   ['configuration','Configuration','Settings'],
  ],
  secretaire:[['tableau-de-bord','Tableau de bord','LayoutDashboard'],['eleves','Élèves','Users'],['classes','Classes','School'],['annees-scolaires','Années scolaires','CalendarDays'],['utilisateurs','Utilisateurs','UserCog'],['rapports','Rapports','BarChart3'],['parametres','Paramètres','Settings']],
- econome:[['tableau-de-bord','Tableau de bord','LayoutDashboard'],['eleves','Élèves','Users'],['inscriptions','Inscriptions','ClipboardList'],['frais-scolaires','Frais scolaires','Wallet'],['paiements','Paiements','CreditCard'],['impayes','Impayés','AlertCircle'],['recus','Reçus','Receipt'],['rapports-financiers','Rapports financiers','BarChart3']],
+ econome:[['tableau-de-bord','Tableau de bord','LayoutDashboard'],['eleves','Élèves','Users'],['inscriptions','Inscriptions','ClipboardList'],['frais-scolaires','Frais de scolarité','Wallet'],['frais-scolaires/ecolage','Écolage','Wallet'],['frais-scolaires/inscription','Droits d’inscription','ClipboardList'],['frais-scolaires/infrastructure','Frais d’infrastructure','FileText'],['frais-scolaires/divers','Frais divers','FileText'],['rapports-financiers','Rapports financiers','BarChart3']],
  titulaire:[['tableau-de-bord','Tableau de bord','LayoutDashboard'],['ma-classe','Ma classe','Users'],['matieres','Matières','BookOpen'],['evaluations','Évaluations','ClipboardList'],['notes','Notes','Pencil'],['moyennes','Moyennes','Calculator'],['classements','Classements','Trophy'],['bulletins','Bulletins','FileText'],['rapports-pedagogiques','Rapports pédagogiques','BarChart3']]
 };
 export const CONFIG_MODULES={
@@ -35,3 +35,21 @@ export const CONFIG_MODULES={
  'rapports-financiers':{titre:'Rapports financiers',description:'Journal de caisse et bilan des recettes',colonnes:['titre','periode','categorie','date'],champs:{titre:'Titre',periode:'Période',categorie:'Catégorie',date:'Date'},lectureSeule:true},
  'rapports-pedagogiques':{titre:'Rapports pédagogiques',description:'Réussite, moyennes et classements',colonnes:['titre','periode','categorie','date'],champs:{titre:'Titre',periode:'Période',categorie:'Catégorie',date:'Date'},lectureSeule:true}
 };
+
+export const SECTIONS_ADMIN_DEFAUT = [
+  ['econome', 'Économat'],
+  ['titulaire', 'Espace pédagogique'],
+  ['secretaire', 'Secrétariat'],
+].map(([espace, titre]) => ({
+  id: espace,
+  titre,
+  liens: NAVIGATION[espace].map(([url]) => `/${espace}/${url}`),
+}));
+
+export const LIENS_SECTIONS_ADMIN = Object.fromEntries(
+  ['econome', 'titulaire', 'secretaire'].flatMap(espace =>
+    NAVIGATION[espace].map(([url, libelle, icone]) => [
+      `/${espace}/${url}`, { espace, libelle, icone },
+    ])
+  )
+);

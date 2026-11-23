@@ -1,11 +1,62 @@
+import { requetePrivee } from "../services/authentification";
+import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { GraduationCap, LogOut, X, ChevronRight } from "lucide-react";
 import Icone from "../components/Icone";
-import { NAVIGATION, ROLES } from "../donnees/configuration";
+import { LIENS_SECTIONS_ADMIN, NAVIGATION, ROLES, SECTIONS_ADMIN_DEFAUT } from "../donnees/configuration";
 
-export default function Sidebar({ role, ouvert, fermer, deconnexion }) {
-  const navigation = NAVIGATION[role] || [];
+export default function Sidebar({ role, administrateur, ouvert, fermer, deconnexion }) {
+  const navigation = administrateur ? NAVIGATION.admin : NAVIGATION[role] || [];
+  const [sections, definirSections] = useState(SECTIONS_ADMIN_DEFAUT);
+
+  useEffect(() => {
+    if (!administrateur) return;
+    const controleur = new AbortController();
+    requetePrivee("/admin/menu", { signal: controleur.signal })
+      .then(({ sections }) => {
+        if (!controleur.signal.aborted) definirSections(sections ?? SECTIONS_ADMIN_DEFAUT);
+      })
+      .catch(() => {});
+    function actualiser(evenement) {
+      definirSections(evenement.detail);
+    }
+    window.addEventListener("slg-menu-admin", actualiser);
+    return () => {
+      controleur.abort();
+      window.removeEventListener("slg-menu-admin", actualiser);
+    };
+  }, [administrateur]);
+  const [sectionsOuvertes, definirSectionsOuvertes] = useState({});
   const nomRole = ROLES[role] || role || "Utilisateur";
+
+  const afficherLiens = (espace, liens) => liens.map(([url, libelle, icone]) => (
+            <NavLink key={url} to={espace ? `/${espace}/${url}` : url} onClick={fermer}
+              end
+              className={({ isActive }) => `group flex min-h-[43px] items-center gap-3 rounded-xl px-3.5 py-2.5 text-[13px] font-semibold transition-all duration-150 ${
+                isActive
+                  ? "bg-white text-[#540916] shadow-sm dark:bg-[#263852] dark:text-white"
+                  : "text-[#F1D4DC] hover:bg-white/10 hover:text-white dark:text-[#A8B7CF] dark:hover:bg-[#263852] dark:hover:text-white"
+              }`}>
+              {({ isActive }) => (
+                <>
+                  <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
+                    isActive
+                      ? "bg-[#F8EDEF] text-[#540916] dark:bg-[#344C6C] dark:text-[#93C5FD]"
+                      : "text-[#E9A5B6] group-hover:text-white dark:text-[#8FA9D1] dark:group-hover:text-white"
+                  }`}>
+                    <Icone nom={icone} taille={18} />
+                  </span>
+
+                  <span className="min-w-0 flex-1 truncate">{libelle}</span>
+
+                  {isActive && (
+                    <ChevronRight size={15}
+                      className="shrink-0 text-[#540916]/70 dark:text-[#93C5FD]" />
+                  )}
+                </>
+              )}
+            </NavLink>
+  ));
 
   return (
     <>
@@ -45,34 +96,25 @@ export default function Sidebar({ role, ouvert, fermer, deconnexion }) {
 
         <nav aria-label="Navigation principale"
           className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-3 pb-4 [scrollbar-width:thin] [scrollbar-color:#94505E_transparent] dark:[scrollbar-color:#405574_transparent]">
-          {navigation.map(([url, libelle, icone]) => (
-            <NavLink key={url} to={`/${role}/${url}`} onClick={fermer}
-              end={url === "" || url === "dashboard"}
-              className={({ isActive }) => `group flex min-h-[43px] items-center gap-3 rounded-xl px-3.5 py-2.5 text-[13px] font-semibold transition-all duration-150 ${
-                isActive
-                  ? "bg-white text-[#540916] shadow-sm dark:bg-[#263852] dark:text-white"
-                  : "text-[#F1D4DC] hover:bg-white/10 hover:text-white dark:text-[#A8B7CF] dark:hover:bg-[#263852] dark:hover:text-white"
-              }`}>
-              {({ isActive }) => (
-                <>
-                  <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
-                    isActive
-                      ? "bg-[#F8EDEF] text-[#540916] dark:bg-[#344C6C] dark:text-[#93C5FD]"
-                      : "text-[#E9A5B6] group-hover:text-white dark:text-[#8FA9D1] dark:group-hover:text-white"
-                  }`}>
-                    <Icone nom={icone} taille={18} />
-                  </span>
-
-                  <span className="min-w-0 flex-1 truncate">{libelle}</span>
-
-                  {isActive && (
-                    <ChevronRight size={15}
-                      className="shrink-0 text-[#540916]/70 dark:text-[#93C5FD]" />
-                  )}
-                </>
-              )}
-            </NavLink>
-          ))}
+          {administrateur && sections.map(({ id, titre, liens }) => {
+            const liensVisibles = liens.filter(url => Object.hasOwn(LIENS_SECTIONS_ADMIN, url))
+              .map(url => [url, LIENS_SECTIONS_ADMIN[url].libelle, LIENS_SECTIONS_ADMIN[url].icone]);
+            const icone = { econome: "Wallet", titulaire: "BookOpen" }[id] ?? "ClipboardList";
+            const ouvert = sectionsOuvertes[id] ?? liensVisibles.some(([url]) => url.startsWith(`/${role}/`));
+            return (
+              <div key={id}>
+                <button type="button" aria-expanded={ouvert}
+                  onClick={() => definirSectionsOuvertes(etat => ({ ...etat, [id]: !ouvert }))}
+                  className="flex min-h-[43px] w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-[13px] font-semibold text-[#F1D4DC] hover:bg-white/10">
+                  <span className="flex h-7 w-7 items-center justify-center"><Icone nom={icone} taille={18} /></span>
+                  <span className="flex-1">{titre}</span>
+                  <ChevronRight size={15} className={ouvert ? "rotate-90 transition-transform" : "transition-transform"} />
+                </button>
+                {ouvert && <div className="ml-4 border-l border-white/20 pl-2">{afficherLiens(null, liensVisibles)}</div>}
+              </div>
+            );
+          })}
+          {afficherLiens(administrateur ? "admin" : role, navigation)}
         </nav>
 
         <div className="shrink-0 border-t border-white/10 p-3 dark:border-[#33445E]">

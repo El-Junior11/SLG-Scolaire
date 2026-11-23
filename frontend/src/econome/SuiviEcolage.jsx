@@ -85,26 +85,51 @@ function SuiviMensuel({ mois }) {
     .sort((a, b) => a.localeCompare(b, "fr", { numeric: true }));
   const lignes = eleves.filter(eleve =>
     (!niveau || eleve.niveau === niveau) && (!statut || (statut === "retard" ? enRetard(eleve) : statutEleve(eleve) === statut)));
-  const eligibles = eleves.filter(eleve => eleve.du != null && eleve.paye < eleve.du);
-  const selection = eligibles.find(eleve => eleve.id === formulaire?.eleveId);
+  const moisVersement = formulaire?.mois;
+  const [autreSuivi, definirAutreSuivi] = useState(null);
+
+  useEffect(() => {
+    if (!moisVersement || moisVersement === mois) return;
+    const controleur = new AbortController();
+    definirAutreSuivi(null);
+    requetePrivee("/ecolage", { params: { mois: moisVersement }, signal: controleur.signal })
+      .then(resultat => {
+        if (!Array.isArray(resultat?.lignes)) throw new Error("Réponse incorrecte de l’API de suivi.");
+        if (!controleur.signal.aborted) definirAutreSuivi({ mois: moisVersement, lignes: resultat.lignes });
+      })
+      .catch(cause => {
+        if (!controleur.signal.aborted) definirAutreSuivi({ mois: moisVersement, erreur: messageErreur(cause) });
+      });
+    return () => controleur.abort();
+  }, [mois, moisVersement]);
+
+  const suiviVersement = moisVersement === mois ? suivi
+    : autreSuivi?.mois === moisVersement ? autreSuivi : null;
+  const candidats = suiviVersement?.lignes ?? [];
+  const selection = candidats.find(eleve => eleve.id === formulaire?.eleveId);
+  const reste = selection?.du == null ? null : selection.du - selection.paye;
+  const peutPayer = reste != null && reste > 0;
+  const moisLisible = moisVersement && new Intl.DateTimeFormat("fr-FR", {
+    month: "long", year: "numeric", timeZone: "UTC",
+  }).format(new Date(`${moisVersement}-01T00:00:00Z`));
 
   function ajouter(eleveId = "") {
     definirConfirmation("");
     definirErreur("");
-    definirFormulaire({ eleveId, montant: "", operationId: crypto.randomUUID() });
+    definirFormulaire({ eleveId, mois, montant: "", operationId: crypto.randomUUID() });
   }
 
   async function enregistrer(evenement) {
     evenement.preventDefault();
-    if (!selection || enCours) return;
+    if (!peutPayer || enCours) return;
     definirEnCours(true);
     definirErreur("");
     try {
       await requetePrivee("/ecolage/versements", {
-        method: "POST", data: { ...formulaire, mois, montant: Number(formulaire.montant) },
+        method: "POST", data: { ...formulaire, montant: Number(formulaire.montant) },
       });
       definirFormulaire(null);
-      definirConfirmation("Versement enregistré.");
+      definirConfirmation(`Versement enregistré pour ${moisLisible}.`);
       definirChargement(true);
       definirRevision(valeur => valeur + 1);
     } catch (cause) {
@@ -128,7 +153,7 @@ function SuiviMensuel({ mois }) {
           {Object.entries(statuts).map(([id, libelle]) => <option key={id} value={id}>{libelle}</option>)}
         </select>
       </label>
-      <button type="button" className={`${bouton} ml-auto`} disabled={chargement || enCours || !eligibles.length}
+      <button type="button" className={`${bouton} ml-auto`} disabled={chargement || enCours || !eleves.length}
         onClick={() => ajouter()}>Ajouter un versement</button>
     </div>
     {suivi && <p className="text-sm text-[#667085] dark:text-[#A8B7CF]">Échéance du mois : {dateCourte(suivi.echeance)}</p>}
@@ -136,23 +161,35 @@ function SuiviMensuel({ mois }) {
     {confirmation && <p role="status" className="text-sm">{confirmation}</p>}
     {formulaire && <form onSubmit={enregistrer}>
       <fieldset disabled={enCours || chargement} className="flex flex-wrap items-end gap-3 rounded-xl border p-4">
-        <legend className="px-2 font-semibold">Versement pour {mois}</legend>
+        <legend className="px-2 font-semibold">Ajouter un versement</legend>
+        <label className="flex flex-col gap-1 text-sm">Mois concerné
+          <input type="month" className={champ} required value={moisVersement}
+            onChange={event => {
+              const valeur = event.target.value;
+              definirFormulaire(donnees => ({ ...donnees, mois: valeur, montant: "", operationId: crypto.randomUUID() }));
+            }} />
+        </label>
         <label className="flex flex-col gap-1 text-sm">Élève
-          <select className={champ} required value={formulaire.eleveId}
+          <select className={champ} required disabled={!suiviVersement?.lignes} value={formulaire.eleveId}
             onChange={event => definirFormulaire(valeur => ({ ...valeur, eleveId: event.target.value }))}>
             <option value="">Sélectionner un élève</option>
-            {eligibles.map(eleve => <option key={eleve.id} value={eleve.id}>
+            {formulaire.eleveId && !selection && <option value={formulaire.eleveId} hidden>Élève sélectionné</option>}
+            {candidats.map(eleve => <option key={eleve.id} value={eleve.id}>
               {eleve.nom} {eleve.prenom} · {eleve.classe}{eleve.matricule && ` · ${eleve.matricule}`}
             </option>)}
           </select>
         </label>
         <label className="flex flex-col gap-1 text-sm">Montant (Ar)
           <input className={champ} type="number" required min="1" step="1"
-            max={selection ? selection.du - selection.paye : undefined} value={formulaire.montant}
+            max={peutPayer ? reste : undefined} disabled={!peutPayer} value={formulaire.montant}
             onChange={event => definirFormulaire(valeur => ({ ...valeur, montant: event.target.value }))} />
         </label>
-        {selection && <p className="py-2 text-sm">Reste : {formatMontant(selection.du - selection.paye)}</p>}
-        <button className={bouton} disabled={!selection}>{enCours ? "Enregistrement…" : "Enregistrer"}</button>
+        {suiviVersement?.erreur && <p role="alert" className="text-sm text-red-600">{suiviVersement.erreur}</p>}
+        {moisVersement && !suiviVersement && <p role="status" className="text-sm">Chargement du solde…</p>}
+        {selection && <p className="py-2 text-sm">{reste == null ? "Tarif à vérifier"
+          : reste <= 0 ? "Écolage déjà payé pour ce mois"
+          : `Reste pour ${moisLisible} : ${formatMontant(reste)}`}</p>}
+        <button className={bouton} disabled={!peutPayer}>{enCours ? "Enregistrement…" : "Enregistrer"}</button>
         <button type="button" className={champ} onClick={() => definirFormulaire(null)}>Annuler</button>
       </fieldset>
     </form>}

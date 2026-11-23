@@ -1,7 +1,8 @@
+import Swal from "sweetalert2";
 import { useEffect, useMemo, useState } from "react";
-import { Search, Eye, Download, FileDown, X, BookOpen } from "lucide-react";
+import { Search, Eye, Download, FileDown, X, BookOpen, Plus, Pencil, Trash2 } from "lucide-react";
 import { utiliserAuthentification } from "../contextes/ContexteAuthentification";
-import { lireModule } from "../services/stockageDemonstration";
+import { enregistrerModule, lireModule } from "../services/stockageDemonstration";
 import { exporterExcel, exporterPDF } from "../utilitaires/exportations";
 
 const carte = "rounded-2xl border border-[#EAE3E5] bg-white shadow-sm dark:border-[#263852] dark:bg-[#14243D]";
@@ -9,7 +10,7 @@ const texte = "text-[#171717] dark:text-white";
 const secondaire = "text-[#667085] dark:text-[#A8B7CF]";
 const champ = "w-full rounded-xl border border-[#E4E7EC] bg-white px-3 py-2.5 text-sm text-[#171717] outline-none focus:border-[#540916] dark:border-[#33445E] dark:bg-[#0B172B] dark:text-white";
 const bouton = "inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors";
-const normaliser = v => String(v || "").trim().toLowerCase().replace(/\s+/g, "");
+const normaliser = v => String(v || "").normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().replace(/\s+/g, "");
 const colonnesExport = ["nom", "classe", "coefficient", "bareme"];
 
 function Fenetre({ titre, fermer, children }) {
@@ -43,13 +44,14 @@ export default function Matieres() {
   const [recherche, definirRecherche] = useState("");
   const [page, definirPage] = useState(1);
   const [selection, definirSelection] = useState(null);
+  const [formulaire, definirFormulaire] = useState(null);
+
+  const appartientClasse = ligne => Boolean(classe) && normaliser(ligne.classe) === normaliser(classe);
 
   useEffect(() => {
     const charger = () => {
-      // Les matières proviennent du stockage commun utilisé par le Secrétaire.
-      // On ne crée aucune donnée dans cet espace.
-      definirMatieres(lireModule("matieres").filter(m => normaliser(m.classe) === normaliser(classe)));
-      definirEvaluations(lireModule("evaluations").filter(e => normaliser(e.classe) === normaliser(classe)));
+      definirMatieres(lireModule("matieres").filter(m => classe && normaliser(m.classe) === normaliser(classe)));
+      definirEvaluations(lireModule("evaluations").filter(e => classe && normaliser(e.classe) === normaliser(classe)));
     };
 
     charger();
@@ -62,7 +64,7 @@ export default function Matieres() {
   }, [classe]);
 
   const donnees = useMemo(() => matieres.filter(m =>
-    String(m.nom || "").toLowerCase().includes(recherche.trim().toLowerCase())
+    normaliser(m.nom).includes(normaliser(recherche))
   ).sort((a, b) => String(a.nom || "").localeCompare(String(b.nom || ""), "fr")), [matieres, recherche]);
 
   const pages = Math.max(1, Math.ceil(donnees.length / 10));
@@ -72,6 +74,78 @@ export default function Matieres() {
   const nombreEvaluations = matiere => evaluations.filter(e =>
     normaliser(e.matiere) === normaliser(matiere)
   ).length;
+
+  function possedeResultats(matiere) {
+    return lireModule("evaluations").some(ligne =>
+      appartientClasse(ligne) && normaliser(ligne.matiere) === normaliser(matiere.nom)
+    ) || lireModule("notes").some(ligne =>
+      (!ligne.classe || appartientClasse(ligne)) &&
+      normaliser(ligne.matiere) === normaliser(matiere.nom)
+    );
+  }
+
+  function sauvegarder(lignes) {
+    try {
+      enregistrerModule("matieres", lignes);
+      definirMatieres(lignes.filter(appartientClasse));
+      return true;
+    } catch {
+      Swal.fire("Enregistrement impossible", "Le navigateur n’a pas pu enregistrer les matières.", "error");
+      return false;
+    }
+  }
+
+  function enregistrer(evenement) {
+    evenement.preventDefault();
+    if (!classe) return;
+    const { originale, nom: saisie, coefficient: coef, bareme: maximum } = formulaire;
+    const nom = saisie.trim();
+    const coefficient = Number(coef);
+    const bareme = Number(maximum);
+    if (!nom || !Number.isFinite(coefficient) || coefficient <= 0 ||
+        !Number.isFinite(bareme) || bareme <= 0) {
+      Swal.fire("Vérifiez les champs", "Le nom est requis. Le coefficient et le barème doivent être positifs.", "warning");
+      return;
+    }
+    const lignes = lireModule("matieres");
+    const index = originale ? lignes.findIndex(ligne =>
+      appartientClasse(ligne) && (originale.id ? ligne.id === originale.id : ligne.nom === originale.nom)
+    ) : -1;
+    if (originale && index < 0) {
+      Swal.fire("Matière introuvable", "Rechargez la liste avant de modifier cette matière.", "warning");
+      return;
+    }
+    if (lignes.some((ligne, rang) => rang !== index && appartientClasse(ligne) &&
+        normaliser(ligne.nom) === normaliser(nom))) {
+      Swal.fire("Matière déjà présente", "Ce nom est déjà utilisé dans cette classe.", "warning");
+      return;
+    }
+    if (originale && nom !== originale.nom && possedeResultats(originale)) {
+      Swal.fire("Matière utilisée", "Cette matière est associée à des notes ou évaluations. Le coefficient et le barème restent modifiables.", "warning");
+      return;
+    }
+    if (originale) lignes[index] = { ...lignes[index], nom, coefficient, bareme };
+    else lignes.push({ id: crypto.randomUUID(), nom, classe, coefficient, bareme });
+    if (sauvegarder(lignes)) {
+      definirFormulaire(null);
+      definirPage(1);
+    }
+  }
+
+  async function supprimer(matiere) {
+    const confirmation = await Swal.fire({
+      title: "Supprimer cette matière ?", text: matiere.nom, icon: "warning",
+      showCancelButton: true, confirmButtonText: "Supprimer", cancelButtonText: "Annuler",
+    });
+    if (!confirmation.isConfirmed) return;
+    if (possedeResultats(matiere)) {
+      Swal.fire("Matière utilisée", "Cette matière est associée à des notes ou évaluations.", "warning");
+      return;
+    }
+    sauvegarder(lireModule("matieres").filter(ligne => !(
+      appartientClasse(ligne) && (matiere.id ? ligne.id === matiere.id : ligne.nom === matiere.nom)
+    )));
+  }
 
   const exportDonnees = donnees.map(m => ({
     nom: m.nom,
@@ -87,7 +161,7 @@ export default function Matieres() {
           Matières
         </h1>
         <p className={`mt-1 text-sm ${secondaire}`}>
-          Consultation des matières · Classe {classe || "non attribuée"}
+          Gestion des matières · Classe {classe || "non attribuée"}
         </p>
       </header>
 
@@ -98,6 +172,11 @@ export default function Matieres() {
             <p className={`mt-1 text-xs ${secondaire}`}>{donnees.length} matière(s)</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={!classe}
+              onClick={() => definirFormulaire({ nom: "", coefficient: "1", bareme: "20" })}
+              className={`${bouton} bg-[#540916] text-white disabled:opacity-50`}>
+              <Plus size={17} /> Nouvelle matière
+            </button>
             <button type="button" onClick={() => exporterExcel(exportDonnees, `matieres-${classe}`)}
               className={`${bouton} border border-[#E4E7EC] ${texte} hover:bg-gray-50 dark:border-[#33445E] dark:hover:bg-[#1D304C]`}>
               <Download size={16} /> Excel
@@ -151,6 +230,11 @@ export default function Matieres() {
                       className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-[#540916] hover:bg-[#540916]/10 dark:text-[#F3A5BC] dark:hover:bg-white/10">
                       <Eye size={16} /> Détails
                     </button>
+                    <button type="button" aria-label={`Modifier ${m.nom}`} title="Modifier"
+                      onClick={() => definirFormulaire({ originale: m, nom: m.nom, coefficient: m.coefficient ?? "", bareme: m.bareme ?? "" })}
+                      className="rounded-lg p-2 text-[#540916] hover:bg-[#540916]/10 dark:text-[#F3A5BC]"><Pencil size={16} /></button>
+                    <button type="button" aria-label={`Supprimer ${m.nom}`} title="Supprimer"
+                      onClick={() => supprimer(m)} className="rounded-lg p-2 text-red-600 hover:bg-red-50"><Trash2 size={16} /></button>
                   </td>
                 </tr>
               ))}
@@ -181,6 +265,27 @@ export default function Matieres() {
           </div>
         </div>
       </section>
+
+      {formulaire && (
+        <Fenetre titre={formulaire.originale ? "Modifier la matière" : "Nouvelle matière"}
+          fermer={() => definirFormulaire(null)}>
+          <form className="space-y-4 p-5" onSubmit={enregistrer}>
+            <p className={secondaire}>Classe {classe}</p>
+            {[
+              ["nom", "Nom de la matière", "text"],
+              ["coefficient", "Coefficient", "number"],
+              ["bareme", "Barème", "number"],
+            ].map(([cle, titre, type]) => (
+              <label className="block" key={cle}>{titre}
+                <input className={champ} type={type} step={type === "number" ? "any" : undefined}
+                  maxLength={type === "text" ? 120 : undefined} required value={formulaire[cle]}
+                  onChange={evenement => definirFormulaire(valeur => ({ ...valeur, [cle]: evenement.target.value }))} />
+              </label>
+            ))}
+            <button className={`${bouton} bg-[#540916] text-white`}>Enregistrer</button>
+          </form>
+        </Fenetre>
+      )}
 
       {selection && (
         <Fenetre titre="Détails de la matière" fermer={() => definirSelection(null)}>

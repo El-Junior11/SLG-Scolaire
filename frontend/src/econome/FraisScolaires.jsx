@@ -2,14 +2,13 @@ import SuiviEcolage from "./SuiviEcolage";
 import { Link, useSearchParams } from "react-router-dom";
 import { utiliserAuthentification } from "../contextes/ContexteAuthentification";
 import TarifsScolaires, { categoriesTarifs } from "./TarifsScolaires";
-import Paiements from "./Paiements";
-import Impayes from "./Impayes";
+import SuiviFrais from "./SuiviFrais";
 import Recus from "./Recus";
 
 const vues = [
   ["tarifs", "Tarifs"],
-  ["paiements", "Paiements", Paiements],
-  ["impayes", "Impayés", Impayes],
+  ["paiements", "Paiements", SuiviFrais],
+  ["impayes", "Impayés", SuiviFrais],
   ["recus", "Reçus", Recus],
 ];
 
@@ -38,8 +37,8 @@ export default function FraisScolaires({ categorie }) {
       </nav>
       {Contenu ? (
         <>
-          {categorie && <p className="text-sm text-[#667085] dark:text-[#A8B7CF]">Vue globale de l’économat</p>}
-          <Contenu />
+          {categorie && vue === "recus" && <p className="text-sm text-[#667085] dark:text-[#A8B7CF]">Vue globale de l’économat</p>}
+          <Contenu key={`${categorie ?? "tous"}-${vue}`} categorie={categorie} impayes={vue === "impayes"} />
         </>
       ) : (
         <TarifsScolaires key={categorie} categorie={categorie} modifiable={utilisateur?.role === "admin"} />

@@ -3,7 +3,7 @@ import { Plus, Search, Pencil, Trash2, Eye, X, Save, Download, FileText, Refresh
 import Swal from "sweetalert2";
 import { exporterExcel, exporterPDF } from "../utilitaires/exportations";
 
-const API = (import.meta.env.VITE_API_URL || "/api").replace(/\/$/, "");
+import { messageErreur, requetePrivee } from "../services/authentification";
 const carte = "rounded-2xl border border-[#EAE3E5] bg-white shadow-sm dark:border-[#263852] dark:bg-[#14243D]";
 const champ = "w-full rounded-xl border border-[#E4E7EC] bg-white px-3 py-2.5 text-sm text-[#171717] outline-none focus:border-[#540916] dark:border-[#33445E] dark:bg-[#0B172B] dark:text-white";
 const bouton = "inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50";
@@ -15,20 +15,6 @@ const couleurs = {
 };
 const vide = { nom: "", cycle: "", niveau: "", capacite: "", description: "" };
 const identifiant = c => c.id ?? c.id_classe;
-
-async function requete(chemin, options = {}) {
-  const reponse = await fetch(`${API}${chemin}`, {
-    ...options,
-    headers: { "Content-Type": "application/json", ...options.headers },
-    credentials: "include"
-  });
-  if (!reponse.ok) {
-    const erreur = await reponse.json().catch(() => ({}));
-    throw new Error(erreur.message || erreur.error || `Erreur HTTP ${reponse.status}`);
-  }
-  if (reponse.status === 204) return null;
-  return reponse.json();
-}
 
 function Fenetre({ titre, fermer, children }) {
   useEffect(() => {
@@ -64,18 +50,17 @@ export default function Classes() {
   const [selection, setSelection] = useState(null);
   const taillePage = 8;
 
-  // Contrat API provisoire : à adapter aux routes réelles du backend.
   const charger = useCallback(async () => {
     setChargement(true);
     setErreur("");
     try {
-      const resultat = await requete("/classes");
+      const resultat = await requetePrivee("/classes");
       const donnees = Array.isArray(resultat) ? resultat : resultat?.data || resultat?.classes;
-      if (!Array.isArray(donnees)) throw new Error("Format de réponse API invalide.");
+      if (!Array.isArray(donnees)) throw new Error("Réponse inattendue. Vérifiez VITE_URL_API dans frontend/.env.");
       setClasses(donnees);
     } catch (e) {
       setClasses([]);
-      setErreur(e.message);
+      setErreur(messageErreur(e));
     } finally {
       setChargement(false);
     }
@@ -123,15 +108,15 @@ export default function Classes() {
 
     setEnCours(true);
     try {
-      await requete(modification ? `/classes/${formulaire.id}` : "/classes", {
+      await requetePrivee(modification ? `/classes/${encodeURIComponent(formulaire.id)}` : "/classes", {
         method: modification ? "PUT" : "POST",
-        body: JSON.stringify(donnees)
+        data: donnees
       });
       setFenetre(null);
       await charger();
       Swal.fire({ icon: "success", title: modification ? "Classe modifiée" : "Classe ajoutée", timer: 1500, showConfirmButton: false });
     } catch (e) {
-      Swal.fire("Erreur", e.message, "error");
+      Swal.fire("Erreur", messageErreur(e), "error");
     } finally {
       setEnCours(false);
     }
@@ -151,11 +136,11 @@ export default function Classes() {
     if (!confirmation.isConfirmed) return;
 
     try {
-      await requete(`/classes/${id}`, { method: "DELETE" });
+      await requetePrivee(`/classes/${encodeURIComponent(id)}`, { method: "DELETE" });
       await charger();
       Swal.fire({ icon: "success", title: "Classe supprimée", timer: 1400, showConfirmButton: false });
     } catch (e) {
-      Swal.fire("Suppression impossible", e.message, "error");
+      Swal.fire("Suppression impossible", messageErreur(e), "error");
     }
   };
 

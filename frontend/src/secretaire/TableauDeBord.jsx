@@ -10,9 +10,10 @@ const carte = "rounded-2xl border border-[#EAE3E5] bg-white shadow-sm dark:borde
 const texte = "text-[#171717] dark:text-white";
 const secondaire = "text-[#667085] dark:text-[#A8B7CF]";
 
-export default function TableauDeBord() {
+export default function TableauDeBord({ espace = "secretaire" }) {
   const { utilisateur } = utiliserAuthentification();
-  const role = utilisateur?.role || "secretaire";
+  const role = espace;
+  const administration = role === "admin";
   const eleves = lireModule("eleves");
   const classes = lireModule("classes");
   const paiements = lireModule("paiements");
@@ -27,7 +28,7 @@ export default function TableauDeBord() {
 
   const recettes = paiements.reduce((a, p) => a + Number(p.montant || 0), 0);
 
-  const cartes = role === "secretaire" ? [
+  const cartes = (administration || role === "secretaire") ? [
     ["Élèves", eleves.length, Users, "#172B50"],
     ["Classes", classes.length, School, "#540916"],
     ["Inscriptions", lireModule("inscriptions").length, FileText, "#26865B"],
@@ -44,7 +45,10 @@ export default function TableauDeBord() {
     ["Bulletins", lireModule("bulletins").length, Award, "#D9799A"]
   ];
 
-  const liens = role === "secretaire" ? [
+  const liens = administration ? [
+    ["eleves", "Élèves"], ["classes", "Classes"], ["demandes", "Demandes d’accès"],
+    ["/econome/tableau-de-bord", "Économat"], ["/titulaire/tableau-de-bord", "Espace pédagogique"],
+  ] : role === "secretaire" ? [
     ["eleves", "Élèves"], ["classes", "Classes"],
     ["annees-scolaires", "Années scolaires"], ["utilisateurs", "Utilisateurs"]
   ] : role === "econome" ? [
@@ -55,7 +59,7 @@ export default function TableauDeBord() {
     ["classements", "Classements"], ["bulletins", "Bulletins"]
   ];
 
-  const nomRole = role === "secretaire" ? "Secrétariat" : role === "econome" ? "Économat" : "Espace titulaire";
+  const nomRole = administration ? "Administration" : role === "secretaire" ? "Secrétariat" : role === "econome" ? "Économat" : "Espace titulaire";
 
   return (
     <div className="space-y-5 font-['Manrope']">
@@ -168,7 +172,7 @@ export default function TableauDeBord() {
         <p className={`mb-4 mt-1 text-[11px] ${secondaire}`}>Accédez aux principales fonctionnalités.</p>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {liens.map(([url, nom]) => (
-            <Link key={url} to={`/${role}/${url}`}
+            <Link key={url} to={url.startsWith("/") ? url : `/${role}/${url}`}
               className="group flex min-h-[46px] items-center justify-between gap-2 rounded-xl border border-[#EAE3E5] bg-[#FCFAFB] px-4 py-3 text-[11px] font-bold text-[#540916] transition-all hover:border-[#540916] hover:bg-[#540916] hover:text-white dark:border-[#30415C] dark:bg-[#1B2E4A] dark:text-[#D6E4FF] dark:hover:bg-[#29446D]">
               {nom}
               <ArrowUpRight size={15} className="shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />

@@ -3,7 +3,9 @@ import { Plus, Search, Pencil, Trash2, Eye, X, Save, Download, FileText, Refresh
 import Swal from "sweetalert2";
 import { exporterExcel, exporterPDF } from "../utilitaires/exportations";
 
-const API = (import.meta.env.VITE_API_URL || "/api").replace(/\/$/, "");
+import { messageErreur, requetePrivee } from "../services/authentification";
+import { utiliserAuthentification } from "../contextes/ContexteAuthentification";
+
 const carte = "rounded-2xl border border-[#EAE3E5] bg-white shadow-sm dark:border-[#263852] dark:bg-[#14243D]";
 const champ = "w-full rounded-xl border border-[#E4E7EC] bg-white px-3 py-2.5 text-sm text-[#171717] outline-none focus:border-[#540916] dark:border-[#33445E] dark:bg-[#0B172B] dark:text-white";
 const bouton = "inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50";
@@ -12,20 +14,6 @@ const inscriptionVide = { eleve_id: "", annee_scolaire_id: "", classe_id: "", ty
 const identifiant = e => e.id ?? e.id_eleve;
 const idClasse = c => c.id ?? c.id_classe;
 const idAnnee = a => a.id ?? a.id_annee;
-
-async function requete(chemin, options = {}) {
-  const reponse = await fetch(`${API}${chemin}`, {
-    ...options,
-    credentials: "include",
-    headers: { "Content-Type": "application/json", ...options.headers }
-  });
-  if (!reponse.ok) {
-    const erreur = await reponse.json().catch(() => ({}));
-    throw new Error(erreur.message || erreur.error || `Erreur HTTP ${reponse.status}`);
-  }
-  if (reponse.status === 204) return null;
-  return reponse.json();
-}
 
 function liste(resultat, cle) {
   if (Array.isArray(resultat)) return resultat;
@@ -83,16 +71,17 @@ export default function GestionEleves() {
   const [inscription, setInscription] = useState(inscriptionVide);
   const [selection, setSelection] = useState(null);
   const taillePage = 8;
+  const { utilisateur } = utiliserAuthentification();
+  const peutGerer = ["admin", "secretaire"].includes(utilisateur?.role);
 
-  // Contrat API provisoire : adapter les routes et champs au backend réel.
   const charger = useCallback(async () => {
     setChargement(true);
     setErreur("");
     try {
       const [resEleves, resClasses, resAnnees] = await Promise.all([
-        requete("/eleves"),
-        requete("/classes"),
-        requete("/annees-scolaires")
+        requetePrivee("/eleves"),
+        requetePrivee("/classes"),
+        requetePrivee("/annees-scolaires")
       ]);
       setEleves(liste(resEleves, "eleves"));
       setClasses(liste(resClasses, "classes"));
@@ -101,7 +90,7 @@ export default function GestionEleves() {
       setEleves([]);
       setClasses([]);
       setAnnees([]);
-      setErreur(e.message);
+      setErreur(messageErreur(e));
     } finally {
       setChargement(false);
     }
@@ -154,7 +143,6 @@ export default function GestionEleves() {
 
     const modification = formulaire.id != null;
     const donnees = {
-      matricule: formulaire.matricule.trim(),
       nom: formulaire.nom.trim(),
       prenom: formulaire.prenom.trim(),
       sexe: formulaire.sexe || null,
@@ -162,21 +150,21 @@ export default function GestionEleves() {
       lieu_naissance: formulaire.lieu_naissance.trim(),
       adresse: formulaire.adresse.trim(),
       telephone: formulaire.telephone.trim(),
-      classe_id: formulaire.classe_id || null,
-      statut: formulaire.statut
+      classe_id: formulaire.classe_id || null
+
     };
 
     setEnCours(true);
     try {
-      await requete(modification ? `/eleves/${formulaire.id}` : "/eleves", {
+      await requetePrivee(modification ? `/eleves/${encodeURIComponent(formulaire.id)}` : "/eleves", {
         method: modification ? "PUT" : "POST",
-        body: JSON.stringify(donnees)
+        data: donnees
       });
       setFenetre(null);
       await charger();
       Swal.fire({ icon: "success", title: modification ? "Élève modifié" : "Élève ajouté", timer: 1500, showConfirmButton: false });
     } catch (e) {
-      Swal.fire("Erreur", e.message, "error");
+      Swal.fire("Erreur", messageErreur(e), "error");
     } finally {
       setEnCours(false);
     }
@@ -196,11 +184,38 @@ export default function GestionEleves() {
     if (!confirmation.isConfirmed) return;
 
     try {
-      await requete(`/eleves/${id}`, { method: "DELETE" });
+      await requetePrivee(`/eleves/${encodeURIComponent(id)}`, { method: "DELETE" });
       await charger();
       Swal.fire({ icon: "success", title: "Élève supprimé", timer: 1400, showConfirmButton: false });
     } catch (e) {
-      Swal.fire("Suppression impossible", e.message, "error");
+      if (utilisateur?.role !== "admin" || e.response?.data?.code !== "ELEVE_INSCRIT") {
+        Swal.fire("Suppression impossible", messageErreur(e), "error");
+        return;
+      }
+
+      const confirmationTest = await Swal.fire({
+        title: "Supprimer ce dossier de test ?",
+        text: `${eleve.nom} ${eleve.prenom} : le dossier, ses inscriptions et ses versements seront définitivement supprimés. Tapez SUPPRIMER pour confirmer.`,
+        icon: "warning",
+        input: "text",
+        inputPlaceholder: "SUPPRIMER",
+        inputValidator: valeur => valeur !== "SUPPRIMER" && "Tapez SUPPRIMER.",
+        showCancelButton: true,
+        confirmButtonText: "Supprimer définitivement",
+        cancelButtonText: "Annuler",
+        confirmButtonColor: "#B42318",
+      });
+      if (!confirmationTest.isConfirmed) return;
+
+      try {
+        await requetePrivee(`/admin/eleves/${encodeURIComponent(id)}/supprimer-test`, {
+          method: "POST", data: { confirmation: confirmationTest.value },
+        });
+        await charger();
+        Swal.fire("Dossier de test supprimé", "", "success");
+      } catch (cause) {
+        Swal.fire("Suppression impossible", messageErreur(cause), "error");
+      }
     }
   };
 
@@ -222,20 +237,20 @@ export default function GestionEleves() {
 
     setEnCours(true);
     try {
-      await requete("/inscriptions", {
+      await requetePrivee("/inscriptions", {
         method: "POST",
-        body: JSON.stringify({
+        data: {
           eleve_id: inscription.eleve_id,
           annee_scolaire_id: inscription.annee_scolaire_id,
           classe_id: inscription.classe_id,
           type: inscription.type
-        })
+        }
       });
       setFenetre(null);
       await charger();
       Swal.fire({ icon: "success", title: "Inscription enregistrée", timer: 1500, showConfirmButton: false });
     } catch (e) {
-      Swal.fire("Inscription impossible", e.message, "error");
+      Swal.fire("Inscription impossible", messageErreur(e), "error");
     } finally {
       setEnCours(false);
     }
@@ -266,12 +281,12 @@ export default function GestionEleves() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => ouvrirInscription(null)} className={`${bouton} border border-[#540916] text-[#540916] hover:bg-[#F8EDEF] dark:border-[#8FA9D1] dark:text-[#A8B7CF] dark:hover:bg-[#263852]`}>
+          {peutGerer && <button onClick={() => ouvrirInscription(null)} className={`${bouton} border border-[#540916] text-[#540916] hover:bg-[#F8EDEF] dark:border-[#8FA9D1] dark:text-[#A8B7CF] dark:hover:bg-[#263852]`}>
             <UserPlus size={17}/> Inscrire / Réinscrire
-          </button>
-          <button onClick={() => ouvrirFormulaire(null)} className={`${bouton} bg-[#540916] text-white hover:bg-[#701326]`}>
+          </button>}
+          {peutGerer && <button onClick={() => ouvrirFormulaire(null)} className={`${bouton} bg-[#540916] text-white hover:bg-[#701326]`}>
             <Plus size={17}/> Nouvel élève
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -328,12 +343,12 @@ export default function GestionEleves() {
                     <div className="flex items-center gap-1">
                       <button title="Détails" onClick={() => { setSelection(e); setFenetre("details"); }}
                         className="rounded-lg p-2 text-[#667085] hover:bg-gray-100 dark:hover:bg-[#263852]"><Eye size={17}/></button>
-                      <button title="Modifier" onClick={() => ouvrirFormulaire(e)}
-                        className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-[#263852]"><Pencil size={17}/></button>
-                      <button title="Inscrire / Réinscrire" onClick={() => ouvrirInscription(e)}
-                        className="rounded-lg p-2 text-green-600 hover:bg-green-50 dark:hover:bg-[#263852]"><UserPlus size={17}/></button>
-                      <button title="Supprimer" onClick={() => supprimer(e)}
-                        className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:hover:bg-[#263852]"><Trash2 size={17}/></button>
+                      {peutGerer && <button title="Modifier" onClick={() => ouvrirFormulaire(e)}
+                        className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-[#263852]"><Pencil size={17}/></button>}
+                      {peutGerer && <button title="Inscrire / Réinscrire" onClick={() => ouvrirInscription(e)}
+                        className="rounded-lg p-2 text-green-600 hover:bg-green-50 dark:hover:bg-[#263852]"><UserPlus size={17}/></button>}
+                      {peutGerer && <button title="Supprimer" onClick={() => supprimer(e)}
+                        className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:hover:bg-[#263852]"><Trash2 size={17}/></button>}
                     </div>
                   </td>
                 </tr>
@@ -375,8 +390,8 @@ export default function GestionEleves() {
         <Fenetre titre={formulaire.id != null ? "Modifier l'élève" : "Nouvel élève"} fermer={() => !enCours && setFenetre(null)}>
           <form onSubmit={enregistrer} className="grid gap-4 sm:grid-cols-2">
             <Champ label="Matricule">
-              <input value={formulaire.matricule} onChange={e => setFormulaire(p => ({ ...p, matricule: e.target.value }))}
-                placeholder="Matricule" className={champ}/>
+              <input value={formulaire.matricule} readOnly placeholder="Attribué à la première inscription"
+                className={`${champ} bg-[#F8F9FC] dark:bg-[#14243D]`} />
             </Champ>
             <Champ label="Nom *">
               <input required value={formulaire.nom} onChange={e => setFormulaire(p => ({ ...p, nom: e.target.value }))}

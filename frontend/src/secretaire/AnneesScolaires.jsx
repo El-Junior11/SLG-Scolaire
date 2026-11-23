@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, Plus, Pencil, Trash2, Search, Eye, ArrowRightLeft, Download, FileText, X, Save, CheckCircle2 } from "lucide-react";
 import Swal from "sweetalert2";
+import { messageErreur, requetePrivee } from "../services/authentification";
 import { lireModule, enregistrerModule } from "../services/stockageDemonstration";
 import { exporterExcel, exporterPDF } from "../utilitaires/exportations";
 
@@ -32,7 +33,7 @@ function Fenetre({ titre, fermer, children }) {
 }
 
 export default function AnneesScolaires() {
-  const [annees, setAnnees] = useState(() => lireModule("annees-scolaires") || []);
+  const [annees, setAnnees] = useState([]);
   const [eleves, setEleves] = useState(() => lireModule("eleves") || []);
   const [classes] = useState(() => lireModule("classes") || []);
   const [recherche, setRecherche] = useState("");
@@ -46,10 +47,26 @@ export default function AnneesScolaires() {
   const [periodes, setPeriodes] = useState({});
   const taillePage = 8;
 
-  const sauvegarderAnnees = donnees => {
-    enregistrerModule("annees-scolaires", donnees);
-    setAnnees(donnees);
-  };
+  async function chargerAnnees() {
+    const liste = await requetePrivee("/annees-scolaires");
+    if (!Array.isArray(liste)) throw new Error("Réponse API incorrecte pour les années scolaires.");
+    setAnnees(liste);
+  }
+
+  useEffect(() => {
+    chargerAnnees().catch(cause => Swal.fire("Chargement impossible", messageErreur(cause), "error"));
+  }, []);
+
+  async function enregistrerAnnee(chemin, options, titre) {
+    try {
+      await requetePrivee(chemin, options);
+      await chargerAnnees();
+      setFenetre(null);
+      Swal.fire({ icon: "success", title: titre, timer: 1400, showConfirmButton: false });
+    } catch (cause) {
+      Swal.fire("Opération impossible", messageErreur(cause), "error");
+    }
+  }
 
   const anneesFiltrees = useMemo(() => annees.filter(a => {
     const texte = `${a.nom || ""} ${a.statut || ""}`.toLowerCase();
@@ -82,11 +99,9 @@ export default function AnneesScolaires() {
       return;
     }
 
-    const objet = { ...formulaire, nom, id: formulaire.id || `annee-${Date.now()}` };
-    const donnees = formulaire.id ? annees.map(a => String(a.id) === String(formulaire.id) ? objet : a) : [...annees, objet];
-    sauvegarderAnnees(donnees);
-    setFenetre(null);
-    Swal.fire({ icon: "success", title: "Enregistrement effectué", timer: 1400, showConfirmButton: false });
+    const id = formulaire.id || crypto.randomUUID();
+    enregistrerAnnee(`/annees-scolaires/${encodeURIComponent(id)}`,
+      { method: "PUT", data: { ...formulaire, nom } }, "Enregistrement effectué");
   };
 
   const supprimer = async annee => {
@@ -98,8 +113,8 @@ export default function AnneesScolaires() {
       confirmButtonColor: "#B42318"
     });
     if (!confirmation.isConfirmed) return;
-    sauvegarderAnnees(annees.filter(a => String(a.id) !== String(annee.id)));
-    Swal.fire({ icon: "success", title: "Année supprimée", timer: 1300, showConfirmButton: false });
+    await enregistrerAnnee(`/annees-scolaires/${encodeURIComponent(annee.id)}`,
+      { method: "DELETE" }, "Année supprimée");
   };
 
   const activer = async annee => {
@@ -111,10 +126,8 @@ export default function AnneesScolaires() {
       confirmButtonColor: "#540916"
     });
     if (!confirmation.isConfirmed) return;
-    sauvegarderAnnees(annees.map(a => ({
-      ...a, statut: String(a.id) === String(annee.id) ? "Active" : "Terminée"
-    })));
-    Swal.fire({ icon: "success", title: "Année scolaire activée", timer: 1400, showConfirmButton: false });
+    await enregistrerAnnee(`/annees-scolaires/${encodeURIComponent(annee.id)}/activation`,
+      { method: "PATCH" }, "Année scolaire activée");
   };
 
   const exporter = type => {

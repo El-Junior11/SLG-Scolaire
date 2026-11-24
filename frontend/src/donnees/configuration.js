@@ -24,7 +24,7 @@ export const NAVIGATION = {
   ],
   econome: [
     ['tableau-de-bord', 'Tableau de bord', 'LayoutDashboard'],
-    ['gestion-eleves', 'Gestion des élèves', 'Users'],
+    ['eleves', 'Élèves', 'Users'],
     ['gestion-financiere', 'Gestion financière', 'Wallet'],
     ['rapports-financiers', 'Rapports financiers', 'BarChart3']
   ],

@@ -244,14 +244,18 @@ const classes = db.collection('classes');
 const cyclesScolaires = ['Primaire', 'Collège', 'Lycée'];
 const idClasseValide = id => /^[A-Za-z0-9_-]{1,128}$/.test(id);
 
-async function autoriserGestionScolaire(req, res, next) {
+function autoriserGestionEleves(req, res, next) {
+  return autoriserGestionScolaire(req, res, next, true);
+}
+
+async function autoriserGestionScolaire(req, res, next, gestionEleves = false) {
   const { uid, email, email_verified: emailVerifie } = req.identite;
   if (uid === ADMIN_UID) return next();
 
   const profil = (await demandes.doc(uid).get()).data();
   if (emailVerifie && profil && profil.email === email &&
       profil.statut === 'approuve' && (profil.role === 'secretaire' ||
-        (profil.role === 'econome' && req.method === 'GET'))) {
+        (profil.role === 'econome' && (req.method === 'GET' || gestionEleves === true)))) {
     return next();
   }
 
@@ -341,6 +345,9 @@ function validerEleve(body) {
     adresse: texte(donnees.adresse ?? '', 240),
     telephone: texte(donnees.telephone ?? '', 50),
   };
+  for (const champ of ['nom_pere', 'prenom_pere', 'nom_mere', 'prenom_mere', 'nom_tuteur', 'prenom_tuteur']) {
+    if (Object.hasOwn(donnees, champ)) eleve[champ] = texte(donnees[champ], 120);
+  }
   if (!eleve.nom || !eleve.prenom || Object.values(eleve).includes(null) ||
       (sexe !== null && !['Masculin', 'Féminin'].includes(sexe)) ||
       (date_naissance !== null && !dateValide(date_naissance)) ||
@@ -377,9 +384,9 @@ async function enregistrerEleve(req, res) {
   res.status(modification ? 200 : 201).json({ id: ref.id });
 }
 
-app.post('/api/eleves', identifier, autoriserGestionScolaire, enregistrerEleve);
-app.put('/api/eleves/:id', identifier, autoriserGestionScolaire, enregistrerEleve);
-app.delete('/api/eleves/:id', identifier, autoriserGestionScolaire, async (req, res) => {
+app.post('/api/eleves', identifier, autoriserGestionEleves, enregistrerEleve);
+app.put('/api/eleves/:id', identifier, autoriserGestionEleves, enregistrerEleve);
+app.delete('/api/eleves/:id', identifier, autoriserGestionEleves, async (req, res) => {
   if (!identifiantValide(req.params.id)) return erreur(res, 400, 'ELEVE_ID', 'Identifiant invalide.');
   const ref = eleves.doc(req.params.id);
   const supprime = await db.runTransaction(async transaction => {
@@ -495,30 +502,93 @@ async function attribuerMatricule(transaction) {
   return null;
 }
 
-app.post('/api/inscriptions', identifier, autoriserGestionScolaire, async (req, res) => {
-  const { eleve_id, annee_scolaire_id, classe_id, type } = req.body ?? {};
-  if (![eleve_id, annee_scolaire_id, classe_id].every(identifiantValide) ||
+app.post('/api/inscriptions', identifier, autoriserGestionEleves, async (req, res) => {
+  const { eleve_id, annee_scolaire_id, classe_id, type, nouvel_eleve, reglements } = req.body ?? {};
+  const creation = nouvel_eleve !== undefined;
+  const nouveau = creation ? validerEleve({ ...nouvel_eleve, classe_id }) : null;
+  if (![annee_scolaire_id, classe_id].every(identifiantValide) ||
+      (creation ? !nouveau || eleve_id !== undefined || type !== 'Nouvelle inscription' : !identifiantValide(eleve_id)) ||
       !['Nouvelle inscription', 'Réinscription'].includes(type)) {
     return erreur(res, 400, 'INSCRIPTION_INVALIDE', 'Choisissez un élève, une année et une classe.');
   }
 
-  const eleve = eleves.doc(eleve_id);
-  const ref = inscriptions.doc(JSON.stringify([eleve_id, annee_scolaire_id]));
+  const droits = reglements?.droits ?? [];
+  const moisEcolage = reglements?.mois ?? [];
+  if (!Array.isArray(droits) || droits.length > 30 || !droits.every(identifiantValide) ||
+      new Set(droits).size !== droits.length || !Array.isArray(moisEcolage) ||
+      moisEcolage.length > 24 || !moisEcolage.every(moisValide) ||
+      new Set(moisEcolage).size !== moisEcolage.length) {
+    return erreur(res, 400, 'REGLEMENTS_INVALIDES', 'Vérifiez les tarifs et les mois sélectionnés.');
+  }
+  const dateVersement = calendrierEcolage.format(new Date());
+  const eleve = creation ? eleves.doc() : eleves.doc(eleve_id);
+  const ref = inscriptions.doc(JSON.stringify([eleve.id, annee_scolaire_id]));
   const result = await db.runTransaction(async transaction => {
     const [dossier, annee, classe, inscription] = await transaction.getAll(
       eleve, annees.doc(annee_scolaire_id), classes.doc(classe_id), ref
     );
-    if (!dossier.exists || !annee.exists || !classe.exists) return 'absent';
+    if ((!creation && !dossier.exists) || !annee.exists || !classe.exists) return 'absent';
     if (inscription.exists) return 'doublon';
-    const matriculeExistant = String(dossier.data().matricule ?? '');
+    const matriculeExistant = String(dossier.data()?.matricule ?? '');
     const attribution = matriculeExistant.trim() ? null : await attribuerMatricule(transaction);
     if (!matriculeExistant.trim() && !attribution) return 'matricule';
     const matricule = attribution?.matricule ?? matriculeExistant;
+    const dossierEleve = nouveau ?? dossier.data();
+    const classeChoisie = classe.data();
+    const paiements = [];
+    for (const tarifId of droits) {
+      const solde = suiviFrais.doc(JSON.stringify([tarifId, eleve.id]));
+      const [tarifDoc, suivi] = await transaction.getAll(tarifsScolaires.doc(tarifId), solde);
+      const tarif = tarifDoc.data();
+      if (tarif?.categorie !== 'inscription' ||
+          (!suivi.exists && !tarifApplicable(tarif, dossierEleve, classeChoisie))) return 'tarif';
+      if (droitGeneral(tarif) && cycleAvecDroit((await transaction.get(droitsInscription)).docs, classeChoisie)) return 'tarif';
+      const du = suivi.data()?.du ?? tarif.montant;
+      const valeur = du - (suivi.data()?.paye ?? 0);
+      if (!Number.isSafeInteger(valeur) || valeur < 0) return 'tarif';
+      if (!valeur) continue;
+      const suiviRegle = { tarifId, eleveId: eleve.id, du, paye: du };
+      paiements.push({
+        solde, suiviRegle, versement: versementsFrais.doc(),
+        donnees: { tarifId, eleveId: eleve.id, valeur },
+      });
+    }
+    if (moisEcolage.length) {
+      const { debut, fin } = annee.data();
+      if (!dateValide(debut) || !dateValide(fin) || moisEcolage.some(mois =>
+        mois < debut.slice(0, 7) || mois > fin.slice(0, 7))) return 'mois';
+      const [tarifs, reglage] = await Promise.all([
+        transaction.get(tarifsEcolage), transaction.get(echeanceEcolageRef),
+      ]);
+      const tarif = trouverTarifEcolage(tarifs.docs, classeChoisie.niveau);
+      for (const mois of moisEcolage) {
+        const solde = suiviEcolage.doc(`${mois}_${eleve.id}`);
+        const suivi = (await transaction.get(solde)).data();
+        const du = suivi?.du ?? tarif.du;
+        const montant = du - (suivi?.paye ?? 0);
+        if (du == null || !Number.isSafeInteger(montant) || montant < 0) return 'tarif';
+        if (!montant) continue;
+        const echeance = echeanceMensuelle(mois, lireJourEcheance(reglage));
+        const moment = dateVersement < `${mois}-01` ? 'avance' : dateVersement > echeance ? 'retard' : 'delai';
+        paiements.push({
+          solde, versement: versementsEcolage.doc(),
+          suiviRegle: { mois, eleveId: eleve.id, du, paye: du, dernierVersement: { date: dateVersement, moment } },
+          donnees: { mois, eleveId: eleve.id, montant, echeance, date: dateVersement, moment },
+        });
+      }
+    }
+    for (const { solde, suiviRegle, versement, donnees } of paiements) {
+      transaction.set(solde, suiviRegle);
+      transaction.create(versement, { ...donnees, saisiPar: req.identite.uid, creeLe: FieldValue.serverTimestamp() });
+    }
     if (attribution) transaction.set(compteurMatriculeRef, { dernierNumero: attribution.numero });
-    transaction.create(ref, { eleve_id, annee_scolaire_id, classe_id, type, creeLe: FieldValue.serverTimestamp() });
-    transaction.update(eleve, { classe_id, statut: 'Inscrit', ...(attribution ? { matricule } : {}) });
+    transaction.create(ref, { eleve_id: eleve.id, annee_scolaire_id, classe_id, type: !creation && matriculeExistant.trim() ? 'Réinscription' : type, creeLe: FieldValue.serverTimestamp() });
+    if (creation) transaction.create(eleve, { ...nouveau, matricule, statut: 'Inscrit' });
+    else transaction.update(eleve, { classe_id, statut: 'Inscrit', ...(attribution ? { matricule } : {}) });
     return { matricule };
   });
+  if (result === 'mois') return erreur(res, 400, 'MOIS_INSCRIPTION', 'Les mois doivent appartenir à l’année scolaire choisie.');
+  if (result === 'tarif') return erreur(res, 409, 'TARIF_INSCRIPTION', 'Un règlement sélectionné ne correspond plus au tarif applicable.');
   if (result === 'absent') return erreur(res, 404, 'INSCRIPTION_ABSENTE', 'Élève, année ou classe introuvable.');
   if (result === 'doublon') return erreur(res, 409, 'INSCRIPTION_EXISTANTE', 'Cet élève est déjà inscrit pour cette année.');
   if (result === 'matricule') return erreur(res, 409, 'MATRICULE_INDISPONIBLE', 'Impossible de trouver un matricule libre. Vérifiez le format dans Configuration.');
@@ -550,7 +620,8 @@ async function enregistrerTarif(req, res) {
     ? categorie === 'divers' && Number.isFinite(quantite) && quantite > 0 && quantite <= Number.MAX_SAFE_INTEGER && Boolean(uniteValide)
     : typeContribution === 'argent' && Number.isSafeInteger(montant) && montant >= 0;
   if (!categoriesTarifs.includes(categorie) || !libelle ||
-      !['tous', 'niveau', 'personnalisee'].includes(portee) ||
+      !['tous', 'niveau', 'personnalisee', 'cycle'].includes(portee) ||
+      (portee === 'cycle' && (categorie !== 'inscription' || !cyclesScolaires.includes(beneficiaires))) ||
       (portee !== 'tous' && !beneficiaires) || !contributionValide || (modification && !identifiantValide(req.params.id))) {
     return erreur(res, 400, 'TARIF_INVALIDE', 'Vérifiez la catégorie, le libellé, la contribution et l’application du tarif.');
   }
@@ -584,6 +655,52 @@ async function enregistrerTarif(req, res) {
 }
 
 app.post('/api/tarifs-scolaires', identifier, administrateur, enregistrerTarif);
+app.put('/api/tarifs-scolaires/grille', identifier, administrateur, async (req, res) => {
+  const { categorie, lignes, debutPaiement = '', finPaiement = '' } = req.body ?? {};
+  if (!['ecolage', 'inscription'].includes(categorie) || !Array.isArray(lignes) ||
+      !lignes.length || lignes.length > 100 || lignes.some(ligne =>
+        !texte(ligne?.cible, 120) || !Number.isSafeInteger(ligne.montant) || ligne.montant < 0) ||
+      new Set(lignes.map(ligne => normaliserNiveau(ligne.cible))).size !== lignes.length ||
+      (debutPaiement && (!dateValide(debutPaiement) || !finPaiement || debutPaiement > finPaiement)) ||
+      (finPaiement && !dateValide(finPaiement))) {
+    return erreur(res, 400, 'GRILLE_TARIFS', 'Vérifiez les montants, les cibles et la période.');
+  }
+  const mensualite = categorie === 'ecolage';
+  const portee = mensualite ? 'niveau' : 'cycle';
+  const resultat = await db.runTransaction(async transaction => {
+    const [existants, listeClasses] = await Promise.all([
+      transaction.get(tarifsScolaires.where('categorie', '==', categorie)),
+      mensualite ? transaction.get(classes) : null,
+    ]);
+    const cibles = mensualite ? listeClasses.docs.map(doc => doc.data().niveau) : cyclesScolaires;
+    const changements = [];
+    for (const { cible, montant } of lignes) {
+      const cle = normaliserNiveau(cible);
+      const cibleValide = cibles.find(valeur => normaliserNiveau(valeur) === cle);
+      if (!cibleValide) return { erreur: `Cible inconnue : ${cible}.` };
+      const correspondances = existants.docs.filter(doc =>
+        doc.data().portee === portee && normaliserNiveau(doc.data().cible) === cle);
+      if (correspondances.length > 1) return { erreur: `Plusieurs tarifs existent pour ${cible}. Vérifiez-les dans la liste.` };
+      const ancien = correspondances[0];
+      if (!mensualite && ancien && ancien.data().montant !== montant) {
+        const historique = await transaction.get(versementsFrais.where('tarifId', '==', ancien.id).limit(1));
+        if (!historique.empty) return { erreur: `Le tarif de ${cible} a déjà des versements. Son montant est conservé.` };
+      }
+      const ref = ancien?.ref ?? tarifsScolaires.doc();
+      const tarif = { categorie, portee, cible: cibleValide, montant,
+        libelle: ancien?.data().libelle ?? (mensualite ? 'Écolage' : 'Droits d’inscription'),
+        typeContribution: 'argent', quantite: null, unite: null,
+        debutPaiement: mensualite ? '' : finPaiement ? debutPaiement : ancien?.data().debutPaiement ?? '',
+        finPaiement: mensualite ? '' : finPaiement || ancien?.data().finPaiement || '' };
+      changements.push({ ref, tarif });
+    }
+    for (const { ref, tarif } of changements) transaction.set(ref, tarif, { merge: true });
+    return { tarifs: changements.map(({ ref, tarif }) => ({ ...tarif, id: ref.id })) };
+  });
+  if (resultat.erreur) return erreur(res, 409, 'GRILLE_TARIFS', resultat.erreur);
+  return res.json(resultat.tarifs);
+});
+
 app.put('/api/tarifs-scolaires/:id', identifier, administrateur, enregistrerTarif);
 app.delete('/api/tarifs-scolaires/:id', identifier, administrateur, async (req, res) => {
   if (!identifiantValide(req.params.id)) return erreur(res, 400, 'TARIF_ID', 'Identifiant de tarif invalide.');
@@ -729,12 +846,66 @@ app.post('/api/ecolage/versements', identifier, autoriserEncaissement, async (re
 
 function tarifApplicable(tarif, eleve, classe) {
   if (tarif.portee === 'tous') return true;
+  if (tarif.portee === 'cycle') return Boolean(classe?.cycle) &&
+    normaliserNiveau(classe.cycle) === normaliserNiveau(tarif.cible);
   if (tarif.portee === 'niveau') {
     return Boolean(classe?.niveau) && normaliserNiveau(classe.niveau) === normaliserNiveau(tarif.cible);
   }
   return tarif.portee === 'personnalisee' && Array.isArray(eleve.groupes) &&
     eleve.groupes.some(groupe => normaliserNiveau(groupe) === normaliserNiveau(tarif.cible));
 }
+
+const droitGeneral = tarif => tarif.categorie === 'inscription' && tarif.portee === 'tous';
+const droitsInscription = tarifsScolaires.where('categorie', '==', 'inscription');
+
+function cycleAvecDroit(documents, classe) {
+  return documents.some(doc => doc.data().portee === 'cycle' && tarifApplicable(doc.data(), null, classe));
+}
+
+app.get('/api/eleves/situation-paiements', identifier, autoriserEncaissement, async (req, res) => {
+  const { eleveId, classeId, mois } = req.query;
+  const moisDemandes = typeof mois === 'string' ? mois.split(',') : [];
+  if (!identifiantValide(classeId) || !moisDemandes.length || moisDemandes.length > 24 ||
+      !moisDemandes.every(moisValide) ||
+      (eleveId !== undefined && !identifiantValide(eleveId))) {
+    return erreur(res, 400, 'SITUATION_PAIEMENTS', 'Choisissez une classe et un mois valides.');
+  }
+
+  const [classeDoc, eleveDoc, droits, tarifs, suiviMensuel, suivisFrais] = await Promise.all([
+    classes.doc(classeId).get(),
+    eleveId ? eleves.doc(eleveId).get() : null,
+    droitsInscription.get(),
+    tarifsEcolage.get(),
+    eleveId ? db.getAll(...moisDemandes.map(m => suiviEcolage.doc(`${m}_${eleveId}`))) : [],
+    eleveId ? suiviFrais.where('eleveId', '==', eleveId).get() : null,
+  ]);
+  if (!classeDoc.exists || (eleveDoc && !eleveDoc.exists)) {
+    return erreur(res, 404, 'DOSSIER_ABSENT', 'Classe ou élève introuvable.');
+  }
+
+  const classe = classeDoc.data();
+  const eleve = eleveDoc?.data() ?? {};
+  const suivis = new Map((suivisFrais?.docs ?? []).map(doc => [doc.data().tarifId, doc.data()]));
+  const droitParCycle = cycleAvecDroit(droits.docs, classe);
+  const inscriptions = droits.docs.flatMap(doc => {
+    const tarif = doc.data();
+    const suivi = suivis.get(doc.id);
+    if (droitParCycle && tarif.portee === 'tous') return [];
+    if (!suivi && !tarifApplicable(tarif, eleve, classe)) return [];
+    return [{
+      id: doc.id,
+      libelle: tarif.libelle,
+      du: suivi?.du ?? tarif.montant,
+      paye: suivi?.paye ?? 0,
+    }];
+  });
+  const tarif = trouverTarifEcolage(tarifs.docs, classe.niveau);
+  const mensualites = moisDemandes.map((mois, index) => {
+    const suivi = suiviMensuel[index]?.data();
+    return { mois, du: suivi?.du ?? tarif.du, paye: suivi?.paye ?? 0, ambigu: !suivi && tarif.ambigu };
+  });
+  return res.json({ inscriptions, ecolage: mensualites[0], mensualites });
+});
 
 app.get('/api/frais-scolaires/:tarifId/suivi', identifier, autoriserEncaissement, async (req, res) => {
   const { tarifId } = req.params;
@@ -745,6 +916,7 @@ app.get('/api/frais-scolaires/:tarifId/suivi', identifier, autoriserEncaissement
   ]);
   const tarif = document.data();
   if (!tarif || tarif.categorie === 'ecolage') return erreur(res, 404, 'TARIF_ABSENT', 'Choisissez un frais existant hors écolage.');
+  const droitsParCycle = droitGeneral(tarif) ? (await droitsInscription.get()).docs : [];
   const classeParId = new Map(listeClasses.docs.map(doc => [doc.id, doc.data()]));
   const suiviParEleve = new Map(suivis.docs.map(doc => [doc.data().eleveId, doc.data()]));
   const lignes = [];
@@ -752,7 +924,7 @@ app.get('/api/frais-scolaires/:tarifId/suivi', identifier, autoriserEncaissement
     const eleve = doc.data();
     const classe = classeParId.get(eleve.classe_id);
     const suivi = suiviParEleve.get(doc.id);
-    if (!suivi && !tarifApplicable(tarif, eleve, classe)) continue;
+    if (!suivi && (!tarifApplicable(tarif, eleve, classe) || cycleAvecDroit(droitsParCycle, classe))) continue;
     const du = suivi?.du ?? (tarif.typeContribution === 'nature' ? tarif.quantite : tarif.montant);
     const paye = suivi?.paye ?? 0;
     const reste = Math.max(0, tarif.typeContribution === 'nature' ? Number((du - paye).toPrecision(15)) : du - paye);
@@ -787,7 +959,8 @@ app.post('/api/frais-scolaires/:tarifId/versements', identifier, autoriserEncais
     if (!suivi.exists) {
       const classe = identifiantValide(eleve.classe_id)
         ? (await transaction.get(classes.doc(eleve.classe_id))).data() : null;
-      if (!tarifApplicable(tarif, eleve, classe)) return 'cible';
+      if (!tarifApplicable(tarif, eleve, classe) || (droitGeneral(tarif) &&
+          cycleAvecDroit((await transaction.get(droitsInscription)).docs, classe))) return 'cible';
     }
     const nature = tarif.typeContribution === 'nature';
     if (!nature && !Number.isSafeInteger(valeur)) return 'invalide';

@@ -2,35 +2,76 @@ import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { Plus, Pencil, Trash2, X, Save, Wallet, Search, Info, AlertCircle } from "lucide-react";
 import { messageErreur, requetePrivee } from "../services/authentification";
-
 export const categoriesTarifs = {
   ecolage: "Écolage",
   inscription: "Droits d’inscription",
   infrastructure: "Frais d’infrastructure",
   divers: "Frais divers"
 };
-
 const portees = {
   tous: "Tous les élèves",
   niveau: "Par niveau",
+  cycle: "Par cycle",
   personnalisee: "Groupe personnalisé"
 };
-
 const champ = "w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-[#540916] dark:focus:border-[#60A5FA] focus:ring-2 focus:ring-[#540916]/10 dark:focus:ring-blue-400/10 dark:border-[#33445E] dark:bg-[#0B172B] dark:text-white";
 const label = "block space-y-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200";
 const montants = new Intl.NumberFormat("fr-FR");
-
+const cycles = ["Primaire", "Collège", "Lycée"];
+const cleCible = valeur => String(valeur ?? "").normalize("NFD")
+  .replace(/\p{Diacritic}|\s/gu, "").toLowerCase().replace(/^(\d+)eme$/, "$1e");
+function GrilleTarifs({ categorie, niveaux, tarifs, fermer, sauvegarder, enCours }) {
+  const ecolage = categorie === "ecolage";
+  const portee = ecolage ? "niveau" : "cycle";
+  const cibles = ecolage ? [...new Map((niveaux ?? []).map(n => [cleCible(n), n])).values()] : cycles;
+  function soumettre(evenement) {
+    evenement.preventDefault();
+    const champs = new FormData(evenement.currentTarget);
+    const lignes = cibles.flatMap(cible => {
+      const montant = champs.get(cible);
+      return montant === "" ? [] : [{ cible, montant: Number(montant) }];
+    });
+    sauvegarder({ categorie, lignes,
+      debutPaiement: champs.get("debut") || "", finPaiement: champs.get("fin") || "" });
+  }
+  return (
+    <form onSubmit={soumettre} className="m-4 space-y-4 rounded-xl border border-slate-200 p-4 dark:border-slate-600">
+      <h3 className="font-semibold">{ecolage ? "Écolage mensuel par niveau" : "Droits d’inscription par cycle"}</h3>
+      {ecolage && !niveaux && <p role="status">Chargement des niveaux…</p>}
+      {ecolage && niveaux?.length === 0 && <p>Ajoutez un niveau dans la section Classes.</p>}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {cibles.map(cible => {
+          const tarif = tarifs.find(t => t.categorie === categorie && t.portee === portee && cleCible(t.cible) === cleCible(cible));
+          return <label className={label} key={cible}>
+            <span>{cible} (Ar)</span>
+            <input className={champ} name={cible} type="number" min="0" step="1" defaultValue={tarif?.montant ?? ""} />
+          </label>;
+        })}
+      </div>
+      {!ecolage && <div className="grid gap-3 sm:grid-cols-2">
+        <label className={label}>Début de la période (facultatif)<input className={champ} name="debut" type="date" /></label>
+        <label className={label}>Date limite commune (facultative)<input className={champ} name="fin" type="date" /></label>
+      </div>}
+      <div className="flex justify-end gap-3">
+        <button type="button" disabled={enCours} onClick={fermer}>Annuler</button>
+        <button type="submit" disabled={enCours || !cibles.length} className="rounded-lg bg-[#540916] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+          {enCours ? "Enregistrement…" : "Enregistrer la grille"}
+        </button>
+      </div>
+    </form>
+  );
+}
 export default function TarifsScolaires({ categorie, modifiable = false }) {
   const [tarifs, definirTarifs] = useState(null);
   const [niveaux, definirNiveaux] = useState(null);
   const [erreurNiveaux, definirErreurNiveaux] = useState("");
   const [filtre, definirFiltre] = useState(categorie ?? "");
   const [recherche, definirRecherche] = useState("");
+  const [grille, definirGrille] = useState(null);
   const [formulaire, definirFormulaire] = useState(null);
   const [enCours, definirEnCours] = useState(false);
   const [erreur, definirErreur] = useState("");
   const [message, definirMessage] = useState("");
-
   useEffect(() => {
     const controleur = new AbortController();
     requetePrivee("/tarifs-scolaires", { signal: controleur.signal })
@@ -41,7 +82,6 @@ export default function TarifsScolaires({ categorie, modifiable = false }) {
       .catch(cause => { if (!controleur.signal.aborted) definirErreur(messageErreur(cause)); });
     return () => controleur.abort();
   }, []);
-
   useEffect(() => {
     if (!formulaire) return;
     const ancien = document.body.style.overflow;
@@ -55,12 +95,11 @@ export default function TarifsScolaires({ categorie, modifiable = false }) {
       document.removeEventListener("keydown", clavier);
     };
   }, [formulaire, enCours]);
-
   const enNature = formulaire?.categorie === "divers" && formulaire.typeContribution === "nature";
   const parNiveau = formulaire?.portee === "niveau";
-
+  const chargerNiveaux = parNiveau || grille === "ecolage";
   useEffect(() => {
-    if (!parNiveau) return;
+    if (!chargerNiveaux) return;
     const controleur = new AbortController();
     definirNiveaux(null);
     definirErreurNiveaux("");
@@ -76,8 +115,7 @@ export default function TarifsScolaires({ categorie, modifiable = false }) {
         if (!controleur.signal.aborted) definirErreurNiveaux(messageErreur(cause));
       });
     return () => controleur.abort();
-  }, [parNiveau]);
-
+  }, [chargerNiveaux]);
   const niveauExistant = formulaire?.id && formulaire.portee === "niveau"
     ? tarifs?.find(tarif => tarif.id === formulaire.id && tarif.portee === "niveau")?.cible
     : "";
@@ -85,11 +123,28 @@ export default function TarifsScolaires({ categorie, modifiable = false }) {
   const niveauValide = Boolean(formulaire?.cible &&
     (niveaux?.includes(formulaire.cible) || formulaire.cible === ancienNiveau));
   const niveauIndisponible = parNiveau && !niveauValide;
-
+  async function sauvegarderGrille(data) {
+    definirErreur("");
+    definirMessage("");
+    if (!data.lignes.length) {
+      definirErreur("Saisissez au moins un montant.");
+      return;
+    }
+    definirEnCours(true);
+    try {
+      const maj = await requetePrivee("/tarifs-scolaires/grille", { method: "PUT", data });
+      definirTarifs(liste => [...liste.filter(t => !maj.some(m => m.id === t.id)), ...maj]);
+      definirGrille(null);
+      definirMessage("Grille enregistrée.");
+    } catch (cause) {
+      definirErreur(messageErreur(cause));
+    } finally {
+      definirEnCours(false);
+    }
+  }
   function modifier(champ, valeur) {
     definirFormulaire(tarif => ({ ...tarif, [champ]: valeur }));
   }
-
   function ajouter() {
     definirErreur("");
     definirMessage("");
@@ -101,25 +156,21 @@ export default function TarifsScolaires({ categorie, modifiable = false }) {
       montant: ""
     });
   }
-
   function editer(tarif) {
     definirErreur("");
     definirMessage("");
     definirFormulaire({ ...tarif });
   }
-
   function fermer() {
     if (enCours) return;
     definirFormulaire(null);
   }
-
   async function enregistrer(evenement) {
     evenement.preventDefault();
     if (niveauIndisponible) return;
     definirEnCours(true);
     definirErreur("");
     definirMessage("");
-
     try {
       const { id, ...saisie } = formulaire;
       const tarif = await requetePrivee(
@@ -134,7 +185,6 @@ export default function TarifsScolaires({ categorie, modifiable = false }) {
           }
         }
       );
-
       definirTarifs(liste => id
         ? liste.map(ligne => ligne.id === id ? tarif : ligne)
         : [...liste, tarif]
@@ -147,7 +197,6 @@ export default function TarifsScolaires({ categorie, modifiable = false }) {
       definirEnCours(false);
     }
   }
-
   async function supprimer(tarif) {
     const resultat = await Swal.fire({
       title: "Supprimer ce tarif ?",
@@ -162,11 +211,9 @@ export default function TarifsScolaires({ categorie, modifiable = false }) {
       cancelButtonColor: "#64748B"
     });
     if (!resultat.isConfirmed) return;
-
     definirEnCours(true);
     definirErreur("");
     definirMessage("");
-
     try {
       await requetePrivee(`/tarifs-scolaires/${encodeURIComponent(tarif.id)}`, { method: "DELETE" });
       definirTarifs(liste => liste.filter(ligne => ligne.id !== tarif.id));
@@ -177,15 +224,12 @@ export default function TarifsScolaires({ categorie, modifiable = false }) {
       definirEnCours(false);
     }
   }
-
   const lignes = tarifs?.filter(tarif =>
     (!filtre || tarif.categorie === filtre) &&
     `${tarif.libelle} ${categoriesTarifs[tarif.categorie]} ${tarif.cible || ""}`
       .toLowerCase().includes(recherche.toLowerCase().trim())
   ).sort((a, b) => a.libelle.localeCompare(b.libelle, "fr"));
-
   return <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#EAE3E5] bg-white shadow-sm dark:border-[#263852] dark:bg-[#14243D]">
-
     {/* EN-TÊTE */}
     <div className="flex shrink-0 flex-col gap-3 border-b border-slate-100 p-4 dark:border-[#263852] sm:flex-row sm:items-center sm:justify-between">
       <div>
@@ -194,7 +238,6 @@ export default function TarifsScolaires({ categorie, modifiable = false }) {
           {tarifs ? `${lignes.length} tarif(s) affiché(s)` : "Chargement des tarifs…"}
         </p>
       </div>
-
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative">
           <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -202,7 +245,6 @@ export default function TarifsScolaires({ categorie, modifiable = false }) {
             placeholder="Rechercher..." aria-label="Rechercher un tarif"
             className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-xs outline-none focus:border-[#540916] dark:focus:border-[#60A5FA] dark:border-[#33445E] dark:bg-[#0B172B] dark:text-white sm:w-44" />
         </div>
-
         {!categorie && <select value={filtre} onChange={event => definirFiltre(event.target.value)}
           aria-label="Filtrer par catégorie"
           className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs outline-none focus:border-[#540916] dark:focus:border-[#60A5FA] dark:border-[#33445E] dark:bg-[#0B172B] dark:text-white">
@@ -211,26 +253,32 @@ export default function TarifsScolaires({ categorie, modifiable = false }) {
             <option key={id} value={id}>{libelle}</option>
           )}
         </select>}
-
-        {modifiable && <button type="button" onClick={ajouter} disabled={!tarifs || enCours}
+        {modifiable && !categorie && ["ecolage", "inscription"].map(type => (
+          <button key={type} type="button" disabled={!tarifs || enCours || Boolean(formulaire)}
+            onClick={() => { definirErreur(""); definirMessage(""); definirGrille(type); }}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold">
+            {type === "ecolage" ? "Écolages par niveau" : "Droits par cycle"}
+          </button>
+        ))}
+        {modifiable && <button type="button" onClick={ajouter} disabled={!tarifs || enCours || Boolean(grille)}
           className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#540916] px-4 text-xs font-bold text-white transition hover:bg-[#74172A] dark:bg-[#29446D] dark:hover:bg-[#365781] disabled:opacity-50">
           <Plus size={17} /> Ajouter un tarif
         </button>}
       </div>
     </div>
-
+    {grille && tarifs && <GrilleTarifs key={grille} categorie={grille} niveaux={niveaux} tarifs={tarifs}
+      fermer={() => definirGrille(null)} sauvegarder={sauvegarderGrille} enCours={enCours} />}
+    {grille === "ecolage" && erreurNiveaux && <p role="alert" className="m-4 text-red-700">{erreurNiveaux}</p>}
     {/* MESSAGES */}
     {erreur && !formulaire && <p role="alert" className="m-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700 dark:bg-[#1B2E4A] dark:text-[#C4D7FF]">{erreur}</p>}
     {message && <p role="status" className="m-4 rounded-lg bg-emerald-50 px-4 py-2 text-sm text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">{message}</p>}
     {!tarifs && !erreur && <p role="status" className="p-6 text-sm text-slate-500 dark:text-[#A8B7CF]">Chargement des tarifs…</p>}
-
     {/* TABLEAU */}
     {lignes?.length === 0 && <div className="flex flex-col items-center justify-center px-5 py-12 text-center">
       <Wallet size={28} className="mb-3 text-slate-300" />
       <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Aucun tarif trouvé</p>
       <p className="mt-1 text-xs text-slate-500 dark:text-[#A8B7CF]">Aucun tarif ne correspond aux critères sélectionnés.</p>
     </div>}
-
     {lignes?.length > 0 && <div className="min-h-0 min-w-0 max-h-[272px] overflow-auto overscroll-contain">
       <table className="w-full min-w-[760px] border-separate border-spacing-0 text-left text-sm">
         <thead className="sticky top-0 z-10 bg-[#F8F9FC] text-xs font-semibold text-slate-600 dark:bg-[#0B172B] dark:text-[#A8B7CF]">
@@ -264,7 +312,6 @@ export default function TarifsScolaires({ categorie, modifiable = false }) {
                 : [tarif.debutPaiement, tarif.finPaiement].filter(Boolean)
                   .map(date => date.split("-").reverse().join("/")).join(" au ") || "À configurer"}
             </td>
-
             {modifiable && <td className="sticky right-0 z-[1] w-px whitespace-nowrap bg-white px-4 py-2 text-right group-hover:bg-slate-50 dark:bg-[#14243D] dark:group-hover:bg-[#1B2E4A]">
               <div className="flex items-center justify-end gap-1.5">
                 <button type="button" onClick={() => editer(tarif)} disabled={enCours}
@@ -283,13 +330,11 @@ export default function TarifsScolaires({ categorie, modifiable = false }) {
         </tbody>
       </table>
     </div>}
-
     {/* MODAL AJOUT / MODIFICATION */}
     {formulaire && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-[2px] sm:p-5"
       onMouseDown={event => { if (event.target === event.currentTarget) fermer(); }}>
       <div role="dialog" aria-modal="true" aria-labelledby="titre-modal-tarif"
         className="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-[#14243D]">
-
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 dark:border-[#263852] sm:px-6">
           <div>
             <h3 id="titre-modal-tarif" className="text-lg font-bold text-slate-900 dark:text-white">
@@ -302,7 +347,6 @@ export default function TarifsScolaires({ categorie, modifiable = false }) {
             <X size={19} />
           </button>
         </div>
-
         <form onSubmit={enregistrer} className="min-h-0 overflow-y-auto">
           <fieldset disabled={enCours} className="grid gap-4 p-5 sm:grid-cols-2 sm:p-6">
             {!categorie && <label className={label}>
@@ -316,14 +360,12 @@ export default function TarifsScolaires({ categorie, modifiable = false }) {
                 )}
               </select>
             </label>}
-
             <label className={label}>
               <span>Libellé <span className="text-red-500 dark:text-[#93C5FD]">*</span></span>
               <input className={champ} required maxLength={120} value={formulaire.libelle}
                 placeholder="Ex. : Droit d'inscription"
                 onChange={event => modifier("libelle", event.target.value)} />
             </label>
-
             {formulaire.categorie === "divers" && <label className={label}>
               <span>Type de contribution</span>
               <select className={champ} value={formulaire.typeContribution ?? "argent"}
@@ -332,7 +374,6 @@ export default function TarifsScolaires({ categorie, modifiable = false }) {
                 <option value="nature">Contribution en nature</option>
               </select>
             </label>}
-
             {enNature ? <>
               <label className={label}>
                 <span>Quantité <span className="text-red-500 dark:text-[#93C5FD]">*</span></span>
@@ -352,7 +393,6 @@ export default function TarifsScolaires({ categorie, modifiable = false }) {
                 value={formulaire.montant ?? ""}
                 onChange={event => modifier("montant", event.target.value)} />
             </label>}
-
             {formulaire.categorie !== "ecolage" && <>
               <label className={label}>
                 <span>Début de la période (facultatif)</span>
@@ -366,19 +406,24 @@ export default function TarifsScolaires({ categorie, modifiable = false }) {
                   onChange={event => modifier("finPaiement", event.target.value)} />
               </label>
             </>}
-
             <label className={label}>
               <span>Application</span>
               <select className={champ} value={formulaire.portee}
                 onChange={event => definirFormulaire(tarif => ({
                   ...tarif, portee: event.target.value, cible: ""
                 }))}>
-                {Object.entries(portees).map(([id, libelle]) =>
+                {Object.entries(portees).filter(([id]) => id !== "cycle" || formulaire.categorie === "inscription").map(([id, libelle]) =>
                   <option key={id} value={id}>{libelle}</option>
                 )}
               </select>
             </label>
-
+            {formulaire.portee === "cycle" && <label className={label}>
+              <span>Cycle</span>
+              <select className={champ} required value={formulaire.cible} onChange={event => modifier("cible", event.target.value)}>
+                <option value="">Choisir un cycle</option>
+                {cycles.map(cycle => <option key={cycle}>{cycle}</option>)}
+              </select>
+            </label>}
             {parNiveau && <label className={label}>
               <span>Niveau de classe <span className="text-red-500 dark:text-[#93C5FD]">*</span></span>
               <select className={champ} required value={formulaire.cible}
@@ -392,18 +437,15 @@ export default function TarifsScolaires({ categorie, modifiable = false }) {
                 : !niveaux ? <span role="status" className="text-xs text-slate-500 dark:text-[#A8B7CF]">Chargement des niveaux…</span>
                 : !niveaux.length && <span className="text-xs text-amber-600">Ajoutez une classe avec un niveau dans Classes.</span>}
             </label>}
-
             {formulaire.portee === "personnalisee" && <label className={label}>
               <span>Nom du groupe <span className="text-red-500 dark:text-[#93C5FD]">*</span></span>
               <input className={champ} required maxLength={120} value={formulaire.cible}
                 onChange={event => modifier("cible", event.target.value)} />
             </label>}
-
             {erreur && <div role="alert" className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-[#1B2E4A] dark:text-[#C4D7FF] sm:col-span-2">
               <AlertCircle size={17} className="mt-0.5 shrink-0" /> {erreur}
             </div>}
           </fieldset>
-
           <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 px-5 py-4 dark:border-[#263852] sm:px-6">
             <button type="button" onClick={fermer} disabled={enCours}
               className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-[#33445E] dark:text-slate-300">

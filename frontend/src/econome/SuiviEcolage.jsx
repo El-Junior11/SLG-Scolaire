@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import Recus from "./Recus";
 import { Link } from "react-router-dom";
-import { Plus, X, Save, Search, CalendarDays, Settings2, Wallet, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Plus, X, Save, Search, CalendarDays, Settings2, Wallet, Loader2, AlertCircle, CheckCircle2, Eye, Receipt } from "lucide-react";
 import { utiliserAuthentification } from "../contextes/ContexteAuthentification";
 import { messageErreur, requetePrivee } from "../services/authentification";
 
@@ -56,7 +57,7 @@ export default function SuiviEcolage() {
   const { utilisateur } = utiliserAuthentification();
   const [mois, definirMois] = useState(moisActuel);
 
-  return <section className="flex w-full min-w-0 flex-col gap-4 lg:h-[calc(100dvh-145px)] lg:min-h-0 lg:overflow-hidden">
+  return <section className="flex w-full min-w-0 flex-col gap-4 shrink-0">
 
     {/* EN-TÊTE FIXE */}
     <header className="flex shrink-0 flex-wrap items-center justify-between gap-3">
@@ -92,6 +93,14 @@ function SuiviMensuel({ mois, definirMois }) {
   const [formulaire, definirFormulaire] = useState(null);
   const [enCours, definirEnCours] = useState(false);
   const [autreSuivi, definirAutreSuivi] = useState(null);
+  const [details, definirDetails] = useState(null);
+  const [afficherRecus, definirAfficherRecus] = useState(false);
+  useEffect(() => {
+    if (!details) return;
+    const fermer = e => { if (e.key === "Escape") definirDetails(null); };
+    document.addEventListener("keydown", fermer);
+    return () => document.removeEventListener("keydown", fermer);
+  }, [details]);
 
   const eleves = suivi?.lignes ?? [];
   const enRetard = eleve => Boolean(suivi?.echeanceDepassee && eleve.du != null && eleve.paye < eleve.du);
@@ -139,11 +148,11 @@ function SuiviMensuel({ mois, definirMois }) {
 
   // FILTRES
   const niveaux = [...new Set(eleves.map(eleve => eleve.niveau).filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b, "fr", { numeric: true }));
+    .sort((a, b) => String(a).localeCompare(String(b), "fr", { numeric: true }));
 
   const lignes = eleves.filter(eleve => {
     const correspond = `${eleve.nom} ${eleve.prenom} ${eleve.classe || ""} ${eleve.matricule || ""}`.toLowerCase();
-    return (!niveau || eleve.niveau === niveau) &&
+    return (!niveau || String(eleve.niveau) === niveau) &&
       (!statut || (statut === "retard" ? enRetard(eleve) : statutEleve(eleve) === statut)) &&
       correspond.includes(recherche.toLowerCase().trim());
   });
@@ -176,7 +185,7 @@ function SuiviMensuel({ mois, definirMois }) {
   const candidats = suiviVersement?.lignes ?? [];
   const selection = candidats.find(eleve => String(eleve.id) === String(formulaire?.eleveId));
   const reste = selection?.du == null ? null : selection.du - selection.paye;
-  const peutPayer = reste != null && reste > 0;
+  const peutPayer = reste != null && reste > 0 && !selection?.ambigu;
 
   const moisLisible = moisVersement && new Intl.DateTimeFormat("fr-FR", {
     month: "long", year: "numeric", timeZone: "UTC"
@@ -217,6 +226,7 @@ function SuiviMensuel({ mois, definirMois }) {
 
       definirFormulaire(null);
       definirConfirmation(`Versement enregistré pour ${moisLisible}.`);
+      definirAfficherRecus(true);
       definirChargement(true);
       definirRevision(valeur => valeur + 1);
     } catch (cause) {
@@ -226,11 +236,11 @@ function SuiviMensuel({ mois, definirMois }) {
     }
   }
 
-  return <section className={`${carte} flex min-h-0 min-w-0 flex-col overflow-hidden`}>
+  return <section className={`${carte} flex w-full min-w-0 shrink-0 flex-col overflow-hidden`}>
 
     {/* FILTRES FIXES */}
     <div className={`shrink-0 border-b p-3 sm:p-4 ${bordure}`}>
-      <div className="grid min-w-0 grid-cols-1 items-end gap-3 sm:grid-cols-2 xl:grid-cols-[150px_150px_170px_minmax(150px,1fr)_auto]">
+      <div className="grid min-w-0 grid-cols-1 items-end gap-3 sm:grid-cols-2 2xl:grid-cols-[150px_150px_170px_minmax(150px,1fr)_auto]">
 
         <label className={label}>
           <span className="flex items-center gap-1.5">
@@ -273,14 +283,18 @@ function SuiviMensuel({ mois, definirMois }) {
           </span>
         </label>
 
-        <button type="button" disabled={chargement || enCours || !eleves.length}
+        <button type="button" disabled={chargement || enCours || !eleves.some(e => e.du != null && e.paye < e.du && !e.ambigu)}
           onClick={() => ajouter()}
-          className={`${bouton} ${principal} h-10 whitespace-nowrap sm:col-span-2 xl:col-span-1`}>
+          className={`${bouton} ${principal} h-10 whitespace-nowrap sm:col-span-2 2xl:col-span-1`}>
           <Plus size={17}/> Ajouter un versement
         </button>
       </div>
     </div>
 
+    <div className={`flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2 ${bordure}`}>
+      <span className={`text-xs ${secondaire}`}>Paiements et justificatifs</span>
+      <button type="button" aria-expanded={afficherRecus} onClick={() => definirAfficherRecus(v => !v)} className={`${bouton} ${contour}`}><Receipt size={16}/> {afficherRecus ? "Masquer les reçus" : "Consulter les reçus"}</button>
+    </div>
     {/* INFORMATIONS DU MOIS */}
     {suivi && <div className={`flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-4 py-3 text-xs ${bordure} ${secondaire}`}>
 
@@ -319,9 +333,9 @@ function SuiviMensuel({ mois, definirMois }) {
     </div>}
 
     {/* TABLEAU : SCROLL VERTICAL ET HORIZONTAL */}
-    <div className="min-h-0 min-w-0 max-h-[272px] overflow-auto overscroll-contain">
+    <div className="w-full min-w-0 shrink-0 max-h-[272px] overflow-auto overscroll-contain">
 
-      <table className="w-full min-w-[1080px] border-separate border-spacing-0 text-left text-sm">
+      <table className="w-full min-w-[980px] border-separate border-spacing-0 text-left text-sm">
 
         {/* EN-TÊTE FIXE */}
         <thead className="sticky top-0 z-10 bg-[#F8F9FC] text-xs font-semibold text-[#667085] dark:bg-[#0B172B] dark:text-[#A8B7CF]">
@@ -333,7 +347,7 @@ function SuiviMensuel({ mois, definirMois }) {
               </th>)}
 
             <th scope="col"
-              className={`sticky right-0 z-20 w-[80px] whitespace-nowrap border-b bg-[#F8F9FC] px-4 text-right font-bold dark:bg-[#0B172B] ${bordure}`}>
+              className={`sticky right-0 z-20 w-[155px] whitespace-nowrap border-b bg-[#F8F9FC] px-4 text-right font-bold dark:bg-[#0B172B] ${bordure}`}>
               Actions
             </th>
           </tr>
@@ -402,15 +416,16 @@ function SuiviMensuel({ mois, definirMois }) {
               </td>
 
               {/* ACTIONS STICKY À DROITE */}
-              <td className={`sticky right-0 z-[1] w-[80px] whitespace-nowrap border-b bg-white px-4 py-1.5 text-right group-hover:bg-[#FAF8F9] dark:bg-[#14243D] dark:group-hover:bg-[#1B2C46] ${bordure}`}>
-                <div className="flex items-center justify-end">
+              <td className={`sticky right-0 z-[1] w-[155px] whitespace-nowrap border-b bg-white px-4 py-1.5 text-right group-hover:bg-[#FAF8F9] dark:bg-[#14243D] dark:group-hover:bg-[#1B2C46] ${bordure}`}>
+                <div className="flex items-center justify-end gap-2">
 
-                  {eleve.du != null && eleve.paye < eleve.du && <button type="button"
+                  <button type="button" onClick={() => definirDetails(eleve)} title="Voir le détail" aria-label={`Voir le détail de ${eleve.nom} ${eleve.prenom}`} className={`${bouton} ${contour} h-8 !px-2 !py-0`}><Eye size={16}/> Voir</button>
+                  {eleve.du != null && eleve.paye < eleve.du && !eleve.ambigu && <button type="button"
                     disabled={enCours} onClick={() => ajouter(eleve.id)}
                     title="Ajouter un versement"
                     aria-label={`Ajouter un versement pour ${eleve.nom} ${eleve.prenom}`}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#540916]/10 text-[#540916] transition-colors hover:bg-[#540916] hover:text-white disabled:opacity-40 dark:bg-[#29446D] dark:text-[#93C5FD] dark:hover:bg-[#365582]">
-                    <Plus size={18}/>
+                    className="inline-flex h-8 items-center justify-center gap-1 rounded-lg px-2 text-xs font-semibold bg-[#540916]/10 text-[#540916] transition-colors hover:bg-[#540916] hover:text-white disabled:opacity-40 dark:bg-[#29446D] dark:text-[#93C5FD] dark:hover:bg-[#365582]">
+                    <Plus size={16}/> Payer
                   </button>}
                 </div>
               </td>
@@ -466,6 +481,15 @@ function SuiviMensuel({ mois, definirMois }) {
       </span>}
     </footer>
 
+    {afficherRecus && <div className="min-w-0 border-t p-3 sm:p-4 dark:border-[#263852]"><p className={`mb-3 text-xs ${secondaire}`}>Reçus disponibles dans l’économat, toutes catégories confondues.</p><Recus key={revision}/></div>}
+    {details && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#101828]/65 p-3" onMouseDown={e => { if (e.target === e.currentTarget) definirDetails(null); }}>
+      <div role="dialog" aria-modal="true" aria-labelledby="titre-details-ecolage" className={`${carte} w-full max-w-lg max-h-[92dvh] overflow-auto p-5`}>
+        <header className="flex items-center justify-between gap-3"><h2 id="titre-details-ecolage" className={`text-lg font-bold ${texte}`}>Détails de l’écolage</h2><button type="button" autoFocus aria-label="Fermer" onClick={() => definirDetails(null)} className={`${bouton} ${contour}`}><X size={18}/></button></header>
+        <p className={`mt-4 font-semibold ${texte}`}>{details.nom} {details.prenom}</p><p className={`text-sm ${secondaire}`}>{details.classe || "—"} · {mois}</p>
+        <dl className="mt-4 grid grid-cols-2 gap-3">{[["Matricule", details.matricule || "—"], ["Statut", details.ambigu ? "Plusieurs tarifs applicables" : statuts[statutEleve(details)]], ["Montant dû", formatMontant(details.du)], ["Versé", formatMontant(details.paye)], ["Reste", formatMontant(details.du == null ? null : details.du - details.paye)], ["Dernier versement", dateCourte(details.dernierVersement?.date)]].map(([titre, valeur]) => <div key={titre} className={`rounded-lg border p-3 ${bordure}`}><dt className={`text-xs ${secondaire}`}>{titre}</dt><dd className={`mt-1 break-words text-sm font-semibold ${texte}`}>{valeur}</dd></div>)}</dl>
+        <footer className="mt-5 flex flex-wrap justify-end gap-2"><button type="button" className={`${bouton} ${contour}`} onClick={() => { definirDetails(null); definirAfficherRecus(true); }}><Receipt size={16}/> Liste des reçus</button>{details.du != null && details.paye < details.du && !details.ambigu && <button type="button" className={`${bouton} ${principal}`} onClick={() => { ajouter(details.id); definirDetails(null); }}><Plus size={16}/> Payer</button>}</footer>
+      </div>
+    </div>}
     {/* MODAL DE VERSEMENT */}
     {formulaire && <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-[#101828]/65 p-3 backdrop-blur-sm sm:p-5"
@@ -525,7 +549,7 @@ function SuiviMensuel({ mois, definirMois }) {
               <select className={champ} required disabled={!suiviVersement?.lignes}
                 value={formulaire.eleveId}
                 onChange={event => definirFormulaire(valeur => ({
-                  ...valeur, eleveId: event.target.value
+                  ...valeur, eleveId: event.target.value, montant: "", operationId: crypto.randomUUID()
                 }))}>
 
                 <option value="">Sélectionner un élève</option>
@@ -584,7 +608,7 @@ function SuiviMensuel({ mois, definirMois }) {
               className="flex items-start gap-2 rounded-lg border border-amber-100 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300 sm:col-span-2">
               <AlertCircle size={17} className="mt-0.5 shrink-0"/>
               <span>
-                {reste == null ? "Tarif à vérifier" : "Écolage déjà payé pour ce mois."}
+                {reste == null || selection.ambigu ? "Tarif à vérifier" : "Écolage déjà payé pour ce mois."}
               </span>
             </div>}
 

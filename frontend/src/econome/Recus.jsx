@@ -139,7 +139,7 @@ export default function Recus() {
 
   // RECHERCHE ET FILTRES
   const recusFiltres = useMemo(() => recus.filter(r => {
-    const contenu = `${r.numero || ""} ${nomEleve(r)} ${r.reference || ""} ${r.reference_paiement || ""}`.toLowerCase();
+    const contenu = `${r.numero || ""} ${nomEleve(r)} ${r.reference || ""} ${r.reference_paiement ||""}`.toLowerCase();
     const rechercheOK = contenu.includes(recherche.trim().toLowerCase());
     const statutOK = filtreStatut === "Tous" || r.statut === filtreStatut;
     const dateOK = !filtreDate || dateCourte(r.date) === filtreDate;
@@ -232,7 +232,7 @@ export default function Recus() {
     }
   };
 
-  return <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 overflow-hidden">
+  return <div className="flex w-full min-w-0 shrink-0 flex-col gap-4">
 
     {/* EN-TÊTE */}
     <header className="flex shrink-0 flex-wrap items-center justify-between gap-3">
@@ -254,7 +254,7 @@ export default function Recus() {
     </header>
 
     {/* CARTE PRINCIPALE */}
-    <section className={`${carte} flex min-h-0 min-w-0 flex-col overflow-hidden`}>
+    <section className={`${carte} flex min-w-0 shrink-0 flex-col`}>
 
       {/* RECHERCHE ET FILTRES FIXES */}
       <div className={`flex shrink-0 flex-col gap-3 border-b p-3 sm:p-4 lg:flex-row lg:items-center lg:justify-between ${bordure}`}>
@@ -298,7 +298,7 @@ export default function Recus() {
       </div>
 
       {/* TABLEAU : 4 LIGNES VISIBLES ET SCROLL INTERNE */}
-      <div className="min-h-0 min-w-0 max-h-[272px] overflow-auto overscroll-contain">
+      <div className="w-full min-w-0 shrink-0 max-h-[272px] overflow-auto overscroll-contain">
 
         <table className="w-full min-w-[800px] border-separate border-spacing-0 text-left text-sm">
 
@@ -361,7 +361,7 @@ export default function Recus() {
                         aria-label={`Télécharger le reçu ${r.numero || ""}`}
                         disabled={telechargement !== null}
                         onClick={() => telecharger(r)}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-blue-600 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:text-[#93C5FD] dark:hover:bg-[#29446D]">
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-blue-600transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:text-[#93C5FD] dark:hover:bg-[#29446D]">
                         {telechargement === idRecu(r)
                           ? <Loader2 size={16} className="animate-spin"/>
                           : <FileDown size={17}/>}

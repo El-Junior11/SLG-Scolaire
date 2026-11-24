@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, X, Save, Search, Wallet, CalendarDays, Loader2, AlertCircle, CheckCircle2, ArrowUpRight, CreditCard } from "lucide-react";
+import { Plus, X, Save, Search, Wallet, CalendarDays, Loader2, AlertCircle, CheckCircle2, ArrowUpRight, CreditCard, Receipt } from "lucide-react";
 import { messageErreur, requetePrivee } from "../services/authentification";
+import Recus from "./Recus";
 import { categoriesTarifs } from "./TarifsScolaires";
 
 const carte = "rounded-2xl border border-[#EAE3E5] bg-white shadow-sm dark:border-[#263852] dark:bg-[#14243D]";
@@ -21,6 +22,8 @@ const nombre = new Intl.NumberFormat("fr-FR", { maximumSignificantDigits: 15 });
 const dateCourte = date => date ? date.split("-").reverse().join("/") : "—";
 
 export default function SuiviFrais({ categorie, impayes }) {
+  const [afficherRecus, definirAfficherRecus] = useState(false);
+  const [revisionRecus, definirRevisionRecus] = useState(0);
   const [tarifs, definirTarifs] = useState(null);
   const [tarifId, definirTarifId] = useState("");
   const [erreur, definirErreur] = useState("");
@@ -45,7 +48,7 @@ export default function SuiviFrais({ categorie, impayes }) {
 
   const tarif = options?.find(entree => String(entree.id) === String(tarifId));
 
-  return <section className={`${carte} flex min-h-0 w-full min-w-0 flex-col overflow-hidden`}>
+  return <section className={`${carte} flex w-full min-w-0 shrink-0 flex-col`}>
 
     {/* EN-TÊTE */}
     <header className={`flex shrink-0 flex-wrap items-center justify-between gap-3 border-b p-4 ${bordure}`}>
@@ -61,13 +64,25 @@ export default function SuiviFrais({ categorie, impayes }) {
         </p>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2">
+        {!impayes && <button type="button" className={`${bouton} ${contour}`} aria-expanded={afficherRecus}
+          onClick={() => definirAfficherRecus(v => !v)}>
+          {afficherRecus ? <X size={16}/> : <Receipt size={16}/>}
+          {afficherRecus ? "Fermer les reçus" : "Consulter les reçus"}
+        </button>}
       {!categorie && <Link to="/econome/frais-scolaires/ecolage"
         className={`${bouton} ${contour} w-full sm:w-auto`}>
         <CalendarDays size={16}/>
         Suivi mensuel de l’écolage
         <ArrowUpRight size={15}/>
       </Link>}
+      </div>
     </header>
+
+    {!impayes && afficherRecus && <div className="min-w-0 shrink-0 p-3 sm:p-4">
+      <p className={`mb-3 text-xs ${secondaire}`}>Reçus de tous les paiements autorisés de l’économat.</p>
+      <Recus key={revisionRecus}/>
+    </div>}
 
     {/* SÉLECTION DU TARIF */}
     <div className={`shrink-0 border-b p-3 sm:p-4 ${bordure}`}>
@@ -107,7 +122,7 @@ export default function SuiviFrais({ categorie, impayes }) {
     </div>
 
     {/* CONTENU DU TARIF */}
-    {tarif ? <ListeFrais key={tarif.id} tarif={tarif} impayes={impayes}/>
+    {tarif ? <ListeFrais key={tarif.id} tarif={tarif} impayes={impayes} apresVersement={() => { definirRevisionRecus(v => v + 1); if (!impayes) definirAfficherRecus(true); }}/> 
       : !!options?.length && <div className="flex min-h-[200px] flex-col items-center justify-center gap-3 p-5 text-center">
 
         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-[#98A2B3] dark:bg-[#263852] dark:text-[#A8B7CF]">
@@ -126,7 +141,7 @@ export default function SuiviFrais({ categorie, impayes }) {
   </section>;
 }
 
-function ListeFrais({ tarif, impayes }) {
+function ListeFrais({ tarif, impayes, apresVersement }) {
   const [resultat, definirResultat] = useState(null);
   const [niveau, definirNiveau] = useState("");
   const [recherche, definirRecherche] = useState("");
@@ -137,7 +152,7 @@ function ListeFrais({ tarif, impayes }) {
   const [enCours, definirEnCours] = useState(false);
 
   const nature = tarif.typeContribution === "nature";
-  const format = valeur => valeur == null ? "—" : `${nombre.format(valeur)} ${nature ? tarif.unite : "Ar"}`;
+  const format = valeur => valeur == null ? "—" : `${nombre.format(valeur)} ${nature ? tarif.unite :"Ar"}`;
   const base = `/frais-scolaires/${encodeURIComponent(tarif.id)}`;
 
   // CHARGEMENT DES DONNÉES
@@ -240,6 +255,7 @@ function ListeFrais({ tarif, impayes }) {
       definirResultat(null);
       definirRevision(valeur => valeur + 1);
       definirMessage("Versement enregistré.");
+      apresVersement?.();
     } catch (cause) {
       definirErreur(messageErreur(cause));
     } finally {
@@ -247,7 +263,7 @@ function ListeFrais({ tarif, impayes }) {
     }
   }
 
-  return <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+  return <div className="flex w-full min-w-0 shrink-0 flex-col">
 
     {/* RECHERCHE ET FILTRES FIXES */}
     <div className={`flex shrink-0 flex-col gap-3 border-b p-3 sm:p-4 lg:flex-row lg:items-end lg:justify-between ${bordure}`}>
@@ -325,7 +341,7 @@ function ListeFrais({ tarif, impayes }) {
     </div>}
 
     {/* TABLEAU : SCROLL INTERNE */}
-    <div className="min-h-0 min-w-0 max-h-[272px] overflow-auto overscroll-contain">
+    <div className="w-full min-w-0 shrink-0 max-h-[272px] overflow-auto overscroll-contain">
 
       <table className="w-full min-w-[850px] border-separate border-spacing-0 text-left text-sm">
 

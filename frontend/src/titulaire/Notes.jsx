@@ -8,7 +8,7 @@ import { exporterExcel, exporterPDF } from "../utilitaires/exportations";
 const carte = "rounded-2xl border border-[#EAE3E5] bg-white shadow-sm dark:border-[#263852] dark:bg-[#14243D]";
 const texte = "text-[#171717] dark:text-white";
 const secondaire = "text-[#667085] dark:text-[#A8B7CF]";
-const champ = "w-full rounded-xl border border-[#E4E7EC] bg-white px-3 py-2.5 text-sm text-[#171717] outline-none focus:border-[#540916] dark:border-[#33445E] dark:bg-[#0B172B] dark:text-white";
+const champ = "w-full min-w-0 rounded-xl border border-[#E4E7EC] bg-white px-3 py-2.5 text-sm text-[#171717] outline-none focus:border-[#540916] dark:border-[#33445E] dark:bg-[#0B172B] dark:text-white dark:focus:border-[#60A5FA]";
 const bouton = "inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors";
 const normaliser = v => String(v || "").trim().toLowerCase().replace(/\s+/g, "");
 const nomEleve = e => `${e.nom || ""} ${e.prenom || ""}`.trim();
@@ -121,7 +121,7 @@ export default function Notes() {
     const resultat = await Swal.fire({
       title: "Supprimer cette note ?", text: `${ligne.eleve} · ${ligne.matiere}`,
       icon: "warning", showCancelButton: true, confirmButtonText: "Supprimer",
-      cancelButtonText: "Annuler", confirmButtonColor: "#B42318"
+      cancelButtonText: "Annuler", confirmButtonColor: document.documentElement.classList.contains("dark") ? "#29446D" : "#B42318"
     });
     if (!resultat.isConfirmed) return;
     enregistrer(lignes.filter(n => n.id !== ligne.id));
@@ -161,25 +161,25 @@ export default function Notes() {
   };
 
   return (
-    <div className="flex h-[calc(100dvh-145px)] min-h-[420px] flex-col gap-4 overflow-hidden">
+    <div className="flex w-full min-w-0 flex-col gap-4 lg:h-[calc(100dvh-145px)] lg:min-h-[420px] lg:overflow-hidden">
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className={`text-3xl font-bold tracking-tight ${texte}`} style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>Notes</h1>
+          <h1 className={`text-2xl font-bold tracking-tight sm:text-3xl ${texte}`} style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>Notes</h1>
           <p className={`mt-1 text-sm ${secondaire}`}>Gestion des notes · Classe {classe || "non attribuée"}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" disabled={!eleves.length || !evaluations.length} onClick={() => { definirCollective(true); definirValeurs({}); }}
-            className={`${bouton} border border-[#540916] text-[#540916] disabled:opacity-40 dark:border-[#F3A5BC] dark:text-[#F3A5BC]`}>
+            className={`${bouton} border border-[#540916] text-[#540916] disabled:opacity-40 dark:border-[#405574] dark:text-[#93C5FD] dark:hover:bg-[#29446D]`}>
             <ClipboardList size={17} /> Saisie collective
           </button>
           <button type="button" disabled={!eleves.length || !evaluations.length} onClick={() => ouvrir(null)}
-            className={`${bouton} bg-[#540916] text-white hover:bg-[#400711] disabled:opacity-40`}>
+            className={`${bouton} bg-[#540916] text-white dark:bg-[#29446D] dark:hover:bg-[#365582] hover:bg-[#400711] disabled:opacity-40`}>
             <Plus size={17} /> Ajouter une note
           </button>
         </div>
       </header>
 
-      <section className={`${carte} flex min-h-0 flex-1 flex-col overflow-hidden`}>
+      <section className={`${carte} flex min-h-0 min-w-0 flex-col overflow-hidden lg:flex-1`}>
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#EAE3E5] p-4 dark:border-[#263852]">
           <div>
             <h2 className={`text-base font-bold ${texte}`}>Liste des notes</h2>
@@ -193,8 +193,8 @@ export default function Notes() {
           </div>
         </div>
 
-        <div className="grid shrink-0 grid-cols-1 gap-3 p-3 md:grid-cols-3">
-          <label className="relative">
+        <div className="grid min-w-0 shrink-0 grid-cols-1 gap-3 p-3 sm:grid-cols-2 xl:grid-cols-3">
+          <label className="relative min-w-0">
             <Search size={17} className="absolute left-3 top-3 text-[#98A2B3]" />
             <input value={recherche} onChange={e => { definirRecherche(e.target.value); definirPage(1); }}
               placeholder="Rechercher une note..." className={`${champ} pl-10`} />
@@ -210,28 +210,29 @@ export default function Notes() {
           </select>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto overscroll-contain">
-          <table className="w-full min-w-[850px] text-left text-sm">
+        <div className="min-h-0 min-w-0 max-h-[272px] overflow-auto overscroll-contain">
+          <table className="w-full min-w-[740px] border-separate border-spacing-0 text-left text-sm">
             <thead className="sticky top-0 z-10 bg-[#F8F9FC] text-xs uppercase text-[#667085] shadow-sm dark:bg-[#0B172B] dark:text-[#A8B7CF]">
               <tr>
-                {["Élève", "Matière", "Évaluation", "Note", "Trimestre", "Actions"].map(t =>
-                  <th key={t} className="px-4 py-3 font-semibold">{t}</th>
+                {["Élève", "Matière", "Évaluation", "Note", "Trimestre"].map(t =>
+                  <th key={t} scope="col" className="h-12 whitespace-nowrap border-b border-[#EAE3E5] px-3 font-semibold dark:border-[#263852]">{t}</th>
                 )}
+                <th scope="col" className="sticky right-0 z-20 h-12 w-[120px] whitespace-nowrap border-b border-[#EAE3E5] bg-[#F8F9FC] px-3 text-right font-semibold dark:border-[#263852] dark:bg-[#0B172B]">Actions</th>
               </tr>
             </thead>
             <tbody>
               {visibles.map((n, i) => (
-                <tr key={n.id || i} className="border-t border-[#EEF0F3] hover:bg-[#F8F9FC] dark:border-[#263852] dark:hover:bg-[#1B2C47]">
-                  <td className={`px-4 py-3 font-semibold ${texte}`}>{n.eleve}</td>
-                  <td className={`px-4 py-3 ${texte}`}>{n.matiere}</td>
-                  <td className={`px-4 py-3 ${texte}`}>{n.evaluation}</td>
-                  <td className={`px-4 py-3 font-bold ${texte}`}>{n.note} / {n.bareme || 20}</td>
-                  <td className={`px-4 py-3 ${texte}`}>{n.trimestre}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      <button type="button" title="Détails" onClick={() => definirSelection(n)} className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-300"><Eye size={17} /></button>
-                      <button type="button" title="Modifier" onClick={() => ouvrir(n)} className="rounded-lg p-2 text-[#540916] hover:bg-red-50 dark:text-[#F3A5BC]"><Pencil size={17} /></button>
-                      <button type="button" title="Supprimer" onClick={() => supprimer(n)} className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:text-red-400"><Trash2 size={17} /></button>
+                <tr key={n.id || i} className="group h-14 hover:bg-[#F8F9FC] dark:hover:bg-[#1B2C47]">
+                  <td className={`whitespace-nowrap border-b border-[#EEF0F3] px-3 py-2 dark:border-[#263852] font-semibold ${texte}`}>{n.eleve}</td>
+                  <td className={`whitespace-nowrap border-b border-[#EEF0F3] px-3 py-2 dark:border-[#263852] ${texte}`}>{n.matiere}</td>
+                  <td className={`whitespace-nowrap border-b border-[#EEF0F3] px-3 py-2 dark:border-[#263852] ${texte}`}>{n.evaluation}</td>
+                  <td className={`whitespace-nowrap border-b border-[#EEF0F3] px-3 py-2 dark:border-[#263852] font-bold ${texte}`}>{n.note} / {n.bareme || 20}</td>
+                  <td className={`whitespace-nowrap border-b border-[#EEF0F3] px-3 py-2 dark:border-[#263852] ${texte}`}>{n.trimestre}</td>
+                  <td className="sticky right-0 z-[1] w-[120px] whitespace-nowrap border-b border-[#EEF0F3] bg-white px-3 py-2 text-right group-hover:bg-[#F8F9FC] dark:border-[#263852] dark:bg-[#14243D] dark:group-hover:bg-[#1B2C47]">
+                    <div className="flex items-center justify-end gap-1">
+                      <button type="button" title="Détails" onClick={() => definirSelection(n)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-blue-600 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-[#29446D]"><Eye size={17} /></button>
+                      <button type="button" title="Modifier" onClick={() => ouvrir(n)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#540916] hover:bg-red-50 dark:text-[#93C5FD] dark:hover:bg-[#29446D]"><Pencil size={17} /></button>
+                      <button type="button" title="Supprimer" onClick={() => supprimer(n)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50 dark:text-[#A8B7CF] dark:hover:bg-[#29446D]"><Trash2 size={17} /></button>
                     </div>
                   </td>
                 </tr>
@@ -246,7 +247,7 @@ export default function Notes() {
           </table>
         </div>
 
-        <div className="flex shrink-0 items-center justify-between border-t border-[#EAE3E5] p-3 dark:border-[#263852]">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-[#EAE3E5] p-3 dark:border-[#263852]">
           <span className={`text-xs ${secondaire}`}>Page {pageActive} / {pages}</span>
           <div className="flex gap-2">
             <button type="button" disabled={pageActive <= 1} onClick={() => definirPage(p => Math.max(1, p - 1))}
@@ -259,7 +260,7 @@ export default function Notes() {
 
       {formulaire && (
         <Fenetre titre={formulaire.id ? "Modifier une note" : "Ajouter une note"} fermer={() => definirFormulaire(null)}>
-          <form onSubmit={soumettre} className="space-y-4 p-5">
+          <form onSubmit={soumettre} className="space-y-4 p-3 sm:p-5">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label><span className={`mb-1 block text-xs font-semibold ${texte}`}>Élève *</span>
                 <select required value={formulaire.eleve} onChange={e => changer("eleve", e.target.value)} className={champ}>
@@ -285,16 +286,16 @@ export default function Notes() {
                 </select>
               </label>
               <label><span className={`mb-1 block text-xs font-semibold ${texte}`}>Note *</span>
-                <input type="number" min="0" max={evaluations.find(e => e.titre === formulaire.evaluation)?.bareme || 20}
+                <input type="number" min="0" max={evaluations.find(e => e.titre === formulaire.evaluation && e.matiere === formulaire.matiere)?.bareme || 20}
                   step="0.25" required value={formulaire.note} onChange={e => changer("note", e.target.value)} className={champ} />
               </label>
               <label><span className={`mb-1 block text-xs font-semibold ${texte}`}>Barème</span>
-                <input readOnly value={evaluations.find(e => e.titre === formulaire.evaluation)?.bareme || 20} className={`${champ} opacity-70`} />
+                <input readOnly value={evaluations.find(e => e.titre === formulaire.evaluation && e.matiere === formulaire.matiere)?.bareme || 20} className={`${champ} opacity-70`} />
               </label>
             </div>
-            <div className="flex justify-end gap-2 border-t border-[#EAE3E5] pt-4 dark:border-[#263852]">
+            <div className="flex flex-wrap justify-end gap-2 border-t border-[#EAE3E5] pt-4 dark:border-[#263852]">
               <button type="button" onClick={() => definirFormulaire(null)} className={`${bouton} border border-[#E4E7EC] ${texte} dark:border-[#33445E]`}>Annuler</button>
-              <button type="submit" className={`${bouton} bg-[#540916] px-5 text-white`}><Save size={16} /> Enregistrer</button>
+              <button type="submit" className={`${bouton} bg-[#540916] px-5 text-white dark:bg-[#29446D] dark:hover:bg-[#365582]`}><Save size={16} /> Enregistrer</button>
             </div>
           </form>
         </Fenetre>
@@ -302,7 +303,7 @@ export default function Notes() {
 
       {collective && (
         <Fenetre titre="Saisie collective des notes" fermer={() => definirCollective(false)}>
-          <div className="space-y-4 p-5">
+          <div className="space-y-4 p-3 sm:p-5">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label><span className={`mb-1 block text-xs font-semibold ${texte}`}>Matière *</span>
                 <select value={matiereCollective} onChange={e => { definirMatiereCollective(e.target.value); definirEvaluationCollective(""); definirValeurs({}); }} className={champ}>
@@ -322,15 +323,15 @@ export default function Notes() {
                 <label key={e.id} className="flex items-center justify-between gap-3 rounded-xl border border-[#EAE3E5] p-3 dark:border-[#33445E]">
                   <span className={`text-sm font-semibold ${texte}`}>{nomEleve(e)}</span>
                   <input type="number" min="0" step="0.25"
-                    max={evaluations.find(x => x.titre === evaluationCollective)?.bareme || 20}
+                    max={evaluations.find(x => x.titre === evaluationCollective && x.matiere === matiereCollective)?.bareme || 20}
                     value={valeurs[e.id] ?? ""} onChange={v => definirValeurs(x => ({ ...x, [e.id]: v.target.value }))}
                     aria-label={`Note de ${nomEleve(e)}`} className={`${champ} max-w-[110px]`} />
                 </label>
               ))}
             </div>
-            <div className="flex justify-end gap-2 border-t border-[#EAE3E5] pt-4 dark:border-[#263852]">
+            <div className="flex flex-wrap justify-end gap-2 border-t border-[#EAE3E5] pt-4 dark:border-[#263852]">
               <button type="button" onClick={() => definirCollective(false)} className={`${bouton} border border-[#E4E7EC] ${texte} dark:border-[#33445E]`}>Annuler</button>
-              <button type="button" onClick={sauvegarderCollective} className={`${bouton} bg-[#540916] text-white`}><Save size={16} /> Enregistrer les notes</button>
+              <button type="button" onClick={sauvegarderCollective} className={`${bouton} bg-[#540916] text-white dark:bg-[#29446D] dark:hover:bg-[#365582]`}><Save size={16} /> Enregistrer les notes</button>
             </div>
           </div>
         </Fenetre>
@@ -351,7 +352,7 @@ export default function Notes() {
             ))}
           </div>
           <div className="flex justify-end border-t border-[#EAE3E5] p-4 dark:border-[#263852]">
-            <button type="button" onClick={() => definirSelection(null)} className={`${bouton} bg-[#540916] px-5 text-white`}>Fermer</button>
+            <button type="button" onClick={() => definirSelection(null)} className={`${bouton} bg-[#540916] px-5 text-white dark:bg-[#29446D] dark:hover:bg-[#365582]`}>Fermer</button>
           </div>
         </Fenetre>
       )}

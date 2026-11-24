@@ -8,7 +8,7 @@ import { exporterExcel, exporterPDF } from "../utilitaires/exportations";
 const carte = "rounded-2xl border border-[#EAE3E5] bg-white shadow-sm dark:border-[#263852] dark:bg-[#14243D]";
 const texte = "text-[#171717] dark:text-white";
 const secondaire = "text-[#667085] dark:text-[#A8B7CF]";
-const champ = "w-full rounded-xl border border-[#E4E7EC] bg-white px-3 py-2.5 text-sm text-[#171717] outline-none focus:border-[#540916] dark:border-[#33445E] dark:bg-[#0B172B] dark:text-white";
+const champ = "w-full min-w-0 rounded-xl border border-[#E4E7EC] bg-white px-3 py-2.5 text-sm text-[#171717] outline-none focus:border-[#540916] dark:border-[#33445E] dark:bg-[#0B172B] dark:text-white dark:focus:border-[#60A5FA]";
 const bouton = "inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors";
 const normaliser = v => String(v || "").trim().toLowerCase().replace(/\s+/g, "");
 const vide = { titre: "", matiere: "", date: "", coefficient: 1, bareme: 20 };
@@ -111,19 +111,19 @@ export default function Evaluations() {
   };
 
   return (
-    <div className="flex h-[calc(100dvh-145px)] min-h-[420px] flex-col gap-4 overflow-hidden">
+    <div className="flex w-full min-w-0 flex-col gap-4 lg:h-[calc(100dvh-145px)] lg:min-h-[420px]">
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className={`text-3xl font-bold tracking-tight ${texte}`} style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>Évaluations</h1>
+          <h1 className={`text-2xl font-bold tracking-tight sm:text-3xl ${texte}`} style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>Évaluations</h1>
           <p className={`mt-1 text-sm ${secondaire}`}>Gestion des évaluations · Classe {classe || "non attribuée"}</p>
         </div>
         <button type="button" disabled={!classe || !matieres.length} onClick={() => ouvrir(null)}
-          className={`${bouton} bg-[#540916] text-white hover:bg-[#400711] disabled:cursor-not-allowed disabled:opacity-50`}>
+          className={`${bouton} bg-[#540916] text-white hover:bg-[#400711] dark:bg-[#29446D] dark:hover:bg-[#365582] disabled:cursor-not-allowed disabled:opacity-50`}>
           <Plus size={17} /> Ajouter une évaluation
         </button>
       </header>
 
-      <section className={`${carte} flex min-h-0 flex-1 flex-col overflow-hidden`}>
+      <section className={`${carte} flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden`}>
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#EAE3E5] p-4 dark:border-[#263852]">
           <div>
             <h2 className={`text-base font-bold ${texte}`}>Liste des évaluations</h2>
@@ -154,29 +154,30 @@ export default function Evaluations() {
           </select>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto overscroll-contain">
-          <table className="w-full min-w-[850px] text-left text-sm">
+        <div className="min-h-0 min-w-0 max-h-[272px] overflow-auto overscroll-contain">
+          <table className="w-full min-w-[720px] border-separate border-spacing-0 text-left text-sm">
             <thead className="sticky top-0 z-10 bg-[#F8F9FC] text-xs uppercase text-[#667085] shadow-sm dark:bg-[#0B172B] dark:text-[#A8B7CF]">
               <tr>
-                {["N°", "Évaluation", "Matière", "Date", "Coefficient", "Barème", "Actions"].map(t => (
-                  <th key={t} className="px-4 py-3 font-semibold">{t}</th>
+                {["N°", "Évaluation", "Matière", "Date", "Coefficient", "Barème"].map(t => (
+                  <th key={t} scope="col" className="h-12 whitespace-nowrap border-b border-[#EAE3E5] px-3 py-2 font-semibold dark:border-[#263852]">{t}</th>
                 ))}
+                <th scope="col" className="sticky right-0 z-20 h-12 w-[120px] whitespace-nowrap border-b border-[#EAE3E5] bg-[#F8F9FC] px-3 text-right font-semibold dark:border-[#263852] dark:bg-[#0B172B]">Actions</th>
               </tr>
             </thead>
             <tbody>
               {visibles.map((ligne, i) => (
-                <tr key={ligne.id} className="border-t border-[#EEF0F3] hover:bg-[#F8F9FC] dark:border-[#263852] dark:hover:bg-[#1B2C47]">
-                  <td className={`px-4 py-3 ${secondaire}`}>{(pageActive - 1) * 10 + i + 1}</td>
-                  <td className={`px-4 py-3 font-semibold ${texte}`}>{ligne.titre}</td>
-                  <td className={`px-4 py-3 ${texte}`}>{ligne.matiere}</td>
-                  <td className={`px-4 py-3 ${texte}`}>{dateFR(ligne.date)}</td>
-                  <td className={`px-4 py-3 ${texte}`}>{ligne.coefficient}</td>
-                  <td className={`px-4 py-3 ${texte}`}>{ligne.bareme}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
+                <tr key={ligne.id} className="group h-14 hover:bg-[#F8F9FC] dark:hover:bg-[#1B2C47]">
+                  <td className={`whitespace-nowrap border-b border-[#EEF0F3] px-3 py-2 dark:border-[#263852] ${secondaire}`}>{(pageActive - 1) * 10 + i + 1}</td>
+                  <td className={`whitespace-nowrap border-b border-[#EEF0F3] px-3 py-2 font-semibold dark:border-[#263852] ${texte}`}>{ligne.titre}</td>
+                  <td className={`whitespace-nowrap border-b border-[#EEF0F3] px-3 py-2 dark:border-[#263852] ${texte}`}>{ligne.matiere}</td>
+                  <td className={`whitespace-nowrap border-b border-[#EEF0F3] px-3 py-2 dark:border-[#263852] ${texte}`}>{dateFR(ligne.date)}</td>
+                  <td className={`whitespace-nowrap border-b border-[#EEF0F3] px-3 py-2 dark:border-[#263852] ${texte}`}>{ligne.coefficient}</td>
+                  <td className={`whitespace-nowrap border-b border-[#EEF0F3] px-3 py-2 dark:border-[#263852] ${texte}`}>{ligne.bareme}</td>
+                  <td className="sticky right-0 z-[1] w-[120px] whitespace-nowrap border-b border-[#EEF0F3] bg-white px-3 py-2 group-hover:bg-[#F8F9FC] dark:border-[#263852] dark:bg-[#14243D] dark:group-hover:bg-[#1B2C47]">
+                    <div className="flex items-center justify-end gap-1">
                       <button type="button" title="Détails" onClick={() => definirSelection(ligne)} className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-white/10"><Eye size={17} /></button>
-                      <button type="button" title="Modifier" onClick={() => ouvrir(ligne)} className="rounded-lg p-2 text-[#540916] hover:bg-red-50 dark:text-[#F3A5BC] dark:hover:bg-white/10"><Pencil size={17} /></button>
-                      <button type="button" title="Supprimer" onClick={() => supprimer(ligne)} className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-white/10"><Trash2 size={17} /></button>
+                      <button type="button" title="Modifier" onClick={() => ouvrir(ligne)} className="rounded-lg p-2 text-[#540916] hover:bg-red-50 dark:text-[#93C5FD] dark:hover:bg-white/10"><Pencil size={17} /></button>
+                      <button type="button" title="Supprimer" onClick={() => supprimer(ligne)} className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:text-[#A8B7CF] dark:hover:bg-white/10"><Trash2 size={17} /></button>
                     </div>
                   </td>
                 </tr>
@@ -191,7 +192,7 @@ export default function Evaluations() {
           </table>
         </div>
 
-        <div className="flex shrink-0 items-center justify-between border-t border-[#EAE3E5] bg-white p-3 dark:border-[#263852] dark:bg-[#14243D]">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-[#EAE3E5] bg-white p-3 dark:border-[#263852] dark:bg-[#14243D]">
           <span className={`text-xs ${secondaire}`}>Page {pageActive} / {pages}</span>
           <div className="flex gap-2">
             <button type="button" disabled={pageActive <= 1} onClick={() => definirPage(p => Math.max(1, p - 1))}
@@ -239,9 +240,9 @@ export default function Evaluations() {
               </label>
             </div>
 
-            <div className="flex justify-end gap-2 border-t border-[#EAE3E5] pt-4 dark:border-[#263852]">
+            <div className="flex flex-wrap justify-end gap-2 border-t border-[#EAE3E5] pt-4 dark:border-[#263852]">
               <button type="button" onClick={() => definirFormulaire(null)} className={`${bouton} border border-[#E4E7EC] ${texte} dark:border-[#33445E]`}>Annuler</button>
-              <button type="submit" className={`${bouton} bg-[#540916] px-5 text-white hover:bg-[#400711]`}>Enregistrer</button>
+              <button type="submit" className={`${bouton} bg-[#540916] px-5 text-white hover:bg-[#400711] dark:bg-[#29446D] dark:hover:bg-[#365582]`}>Enregistrer</button>
             </div>
           </form>
         </Fenetre>
@@ -265,7 +266,7 @@ export default function Evaluations() {
             ))}
           </div>
           <div className="flex justify-end border-t border-[#EAE3E5] p-4 dark:border-[#263852]">
-            <button type="button" onClick={() => definirSelection(null)} className={`${bouton} bg-[#540916] px-5 text-white`}>Fermer</button>
+            <button type="button" onClick={() => definirSelection(null)} className={`${bouton} bg-[#540916] px-5 text-white dark:bg-[#29446D]`}>Fermer</button>
           </div>
         </Fenetre>
       )}

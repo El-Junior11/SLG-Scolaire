@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import Swal from "sweetalert2";
+import { MessageSquare, Send, X, MapPin, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 import Icone from "../components/Icone";
 import { utiliserAuthentification } from "../contextes/ContexteAuthentification";
@@ -7,9 +9,10 @@ import { destination } from "../services/authentification";
 import { ETABLISSEMENT } from "../donnees/configuration";
 const navigation = [
   ["Accueil", "#accueil"],
-  ["Notre école", "#presentation"],
+  ["À propos", "#presentation"],
   ["Cycles scolaires", "#cycles"],
-  ["Fonctionnalités", "#fonctionnalites"]
+  ["Fonctionnalités", "#fonctionnalites"],
+  ["Contact", "#contact"]
 ];
 const cycles = [
   {
@@ -41,7 +44,42 @@ const espaces = [
   { nom: "Économat", icone: "Wallet", description: "Paiements, frais scolaires et suivi financier." },
   { nom: "Enseignants", icone: "BookOpen", description: "Évaluations, notes et bulletins scolaires." }
 ];
+const initial = { nom: "", email: "", sujet: "", message: "" };
 export default function Accueil() {
+  const [modalOuvert, definirModalOuvert] = useState(false);
+  const [formulaire, definirFormulaire] = useState(initial);
+
+  useEffect(() => {
+    if (!modalOuvert) return;
+    const ancien = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    function clavier(event) {
+      if (event.key === 'Escape') definirModalOuvert(false);
+    }
+    document.addEventListener('keydown', clavier);
+    return () => {
+      document.body.style.overflow = ancien;
+      document.removeEventListener('keydown', clavier);
+    };
+  }, [modalOuvert]);
+
+  function modifier(champ, valeur) {
+    definirFormulaire(actuel => ({ ...actuel, [champ]: valeur }));
+  }
+
+  async function soumettre(event) {
+    event.preventDefault();
+    await Swal.fire({
+      title: 'Mode démonstration',
+      text: "Le formulaire a été validé, mais votre message n'a pas été envoyé. Le service d'envoi n'est pas encore configuré.",
+      icon: 'info',
+      confirmButtonText: 'Compris',
+      confirmButtonColor: '#540916',
+      customClass: { popup: 'rounded-2xl' }
+    });
+  }
+
+
   const [menuOuvert, setMenuOuvert] = useState(false);
   const [cycleActif, setCycleActif] = useState(0);
   const fermerMenu = () => setMenuOuvert(false);
@@ -86,8 +124,8 @@ export default function Accueil() {
                 {titre}
               </a>
             ))}
-            <Link to="/apropos" className="text-[12px] font-bold text-[#5C5053] hover:text-marron">À propos</Link>
-            <Link to="/contact" className="text-[12px] font-bold text-[#5C5053] hover:text-marron">Contact</Link>
+
+
           </nav>
           <div className="flex shrink-0 items-center gap-2">
             <Link to={lienEspace}
@@ -110,8 +148,8 @@ export default function Accueil() {
                 {titre}
               </a>
             ))}
-            <Link to="/apropos" onClick={fermerMenu} className="px-3 py-3 text-sm font-bold">À propos</Link>
-            <Link to="/contact" onClick={fermerMenu} className="px-3 py-3 text-sm font-bold">Contact</Link>
+
+
             <Link to={lienEspace} onClick={fermerMenu}
               className="mt-2 rounded-xl bg-marron px-5 py-3 text-center text-sm font-bold text-white sm:hidden">
               {libelleConnexion}
@@ -123,7 +161,7 @@ export default function Accueil() {
       <section id="accueil" className="scroll-mt-20 bg-[#FAF8F7]">
         <div className="mx-auto grid max-w-[1440px] lg:min-h-[490px] lg:grid-cols-[49%_51%]">
           <div className="relative min-h-[280px] overflow-hidden bg-[#E9DDDA] sm:min-h-[360px] lg:min-h-[490px]">
-<img src="/images/image.png" alt={`Établissement ${etablissement.nom}`}
+<img src={etablissement.photo || "/images/image.png"} alt={`Établissement ${etablissement.nom}`}
               className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 hover:scale-[1.03]"/>
             <div className="absolute inset-0 bg-gradient-to-t from-[#27050D]/65 via-transparent to-transparent"/>
             <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-3 sm:bottom-7 sm:left-8">
@@ -140,11 +178,11 @@ export default function Accueil() {
             <div className="mb-5 flex items-center gap-3">
               <span className="h-px w-8 bg-marron"/>
               <span className="text-[10px] font-extrabold uppercase tracking-[.2em] text-marron">
-                Bienvenue à SLG Mahasoabe
+                Bienvenue à {etablissement.nom}
               </span>
             </div>
             <h1 className="max-w-[650px] font-editorial text-[35px] font-semibold leading-[1.12] tracking-[-.035em] text-marron sm:text-[45px] xl:text-[59px]">
-              Apprendre, grandir et construire son avenir.
+              {etablissement.slogan || "Apprendre, grandir et construire son avenir."}
             </h1>
             <p className="mt-5 max-w-[560px] text-[13px] leading-7 text-[#766B6E] sm:text-[14px]">
               Bienvenue à {etablissement.nom}. Une plateforme de gestion scolaire
@@ -181,19 +219,14 @@ export default function Accueil() {
           <div>
             <span className="text-[10px] font-extrabold uppercase tracking-[.2em] text-marron">Notre établissement</span>
             <h2 className="mt-3 max-w-[540px] font-editorial text-[29px] font-semibold leading-tight tracking-tight text-marron md:text-[39px]">
-              Une éducation qui accompagne chaque étape.
+              {etablissement.nom}
             </h2>
           </div>
           <div>
-            <p className="text-[13px] leading-8 text-[#746A6D] sm:text-sm">
-              De l'enseignement primaire au lycée, {etablissement.nom} accompagne
-              les élèves tout au long de leur parcours scolaire. Notre organisation
-              associe le suivi administratif, la gestion financière et les outils
-              pédagogiques pour soutenir le fonctionnement de l'établissement.
+            <p className="whitespace-pre-line break-words text-[13px] leading-8 text-[#746A6D] sm:text-sm">
+              {etablissement.historique || `De l’enseignement primaire au lycée, ${etablissement.nom} accompagne les élèves tout au long de leur parcours scolaire.`}
             </p>
-            <Link to="/apropos" className="mt-5 inline-flex items-center gap-2 text-xs font-extrabold text-marron hover:underline">
-              En savoir plus sur notre école <Icone nom="ArrowUpRight" taille={16}/>
-            </Link>
+            <p className="mt-4 text-sm leading-7 text-[#746A6D]">La plateforme accompagne la gestion administrative, financière et pédagogique de l’établissement à travers des espaces adaptés aux responsabilités du personnel.</p>
           </div>
         </div>
       </section>
@@ -339,29 +372,102 @@ export default function Accueil() {
           </Link>
         </div>
       </section>
-      {/* FOOTER */}
-      <footer className="bg-marron-fonce text-white/75">
-        <div className="mx-auto flex max-w-[1320px] flex-col items-center justify-between gap-4 px-5 py-7 text-center md:flex-row md:px-8 md:text-left">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white">
-              {etablissement.logo
-                ? <img src={etablissement.logo} alt="" referrerPolicy="no-referrer" className="h-6 w-6 object-contain" />
-                : <Icone nom="GraduationCap" taille={20}/>}
+      {/* CONTACT ET FOOTER */}
+      <footer id="contact" className="scroll-mt-20 bg-marron-fonce text-white/75">
+        <div className="mx-auto grid max-w-[1320px] gap-8 px-5 py-10 sm:grid-cols-2 lg:grid-cols-3 md:px-8">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white">
+                {etablissement.logo ? <img src={etablissement.logo} alt="" referrerPolicy="no-referrer" className="h-8 w-8 object-contain" /> : <Icone nom="GraduationCap" taille={24}/>}
+              </div>
+              <h2 className="break-words text-sm font-extrabold text-white">{etablissement.nom}</h2>
             </div>
-            <div>
-              <p className="text-xs font-extrabold text-white">{etablissement.nom}</p>
-            </div>
+            <p className="mt-4 text-sm leading-6">Plateforme de gestion administrative, financière et pédagogique.</p>
           </div>
-          <p className="text-[11px]">
-            © {new Date().getFullYear()} {etablissement.nom} · Plateforme de gestion scolaire
-          </p>
-          <div className="flex items-center gap-5 text-[11px]">
-            <Link to="/apropos" className="hover:text-white">À propos</Link>
-            <Link to="/contact" className="hover:text-white">Contact</Link>
-            <Link to={lienEspace} className="hover:text-white">{libelleConnexion}</Link>
+          <div>
+            <h2 className="mb-4 text-sm font-bold text-white">Navigation</h2>
+            <nav className="grid gap-2 text-sm">{navigation.map(([titre, lien]) => <a key={lien} href={lien} className="hover:text-white">{titre}</a>)}<Link to={lienEspace} className="hover:text-white">{libelleConnexion}</Link></nav>
+          </div>
+          <div className="min-w-0">
+            <h2 className="mb-4 text-sm font-bold text-white">Nous contacter</h2>
+            <div className="space-y-3 text-sm">
+              {etablissement.siege && <p className="flex items-start gap-2"><MapPin size={17} className="shrink-0"/><span className="whitespace-pre-line break-words min-w-0">{etablissement.siege}</span></p>}
+              {etablissement.contact && <p className="flex items-start gap-2"><Phone size={17} className="shrink-0"/><span className="whitespace-pre-line break-words min-w-0">{etablissement.contact}</span></p>}
+              {!etablissement.siege && !etablissement.contact && <p>Coordonnées non disponibles.</p>}
+            </div>
+            <button type="button" onClick={() => definirModalOuvert(true)} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-marron"><MessageSquare size={17}/> Écrire un message</button>
+            <p className="mt-2 text-xs text-white/70">Formulaire en mode démonstration.</p>
           </div>
         </div>
+        <div className="border-t border-white/15 px-5 py-5 text-center text-xs">© {new Date().getFullYear()} {etablissement.nom} · Plateforme de gestion scolaire</div>
       </footer>
+    {modalOuvert && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-[3px] sm:p-5"
+      onMouseDown={event => { if (event.target === event.currentTarget) definirModalOuvert(false); }}>
+      <div role="dialog" aria-modal="true" aria-labelledby="titre-modal-contact"
+        className="flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <header className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 sm:px-6">
+          <div>
+            <p className="mb-1 text-xs font-bold uppercase tracking-wider text-[#540916]">Contact</p>
+            <h2 id="titre-modal-contact" className="text-xl font-extrabold text-slate-900">Écrire un message</h2>
+            <p className="mt-1 text-sm text-slate-500">Complétez les informations ci-dessous.</p>
+          </div>
+          <button type="button" onClick={() => definirModalOuvert(false)} aria-label="Fermer"
+            className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100">
+            <X size={20} />
+          </button>
+        </header>
+
+        <form onSubmit={soumettre} className="min-h-0 space-y-4 overflow-y-auto p-5 sm:p-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold text-slate-700">Nom complet <span className="text-red-500">*</span></span>
+              <input type="text" required maxLength={120} autoComplete="name"
+                value={formulaire.nom} onChange={event => modifier('nom', event.target.value)}
+                placeholder="Votre nom complet"
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#540916] focus:ring-2 focus:ring-[#540916]/10" />
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold text-slate-700">Adresse e-mail <span className="text-red-500">*</span></span>
+              <input type="email" required maxLength={254} autoComplete="email"
+                value={formulaire.email} onChange={event => modifier('email', event.target.value)}
+                placeholder="exemple@email.com"
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#540916] focus:ring-2 focus:ring-[#540916]/10" />
+            </label>
+          </div>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold text-slate-700">Sujet <span className="text-red-500">*</span></span>
+            <input type="text" required maxLength={160}
+              value={formulaire.sujet} onChange={event => modifier('sujet', event.target.value)}
+              placeholder="Objet de votre message"
+              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#540916] focus:ring-2 focus:ring-[#540916]/10" />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-semibold text-slate-700">Message <span className="text-red-500">*</span></span>
+            <textarea required rows={5} maxLength={3000}
+              value={formulaire.message} onChange={event => modifier('message', event.target.value)}
+              placeholder="Rédigez votre message..."
+              className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#540916] focus:ring-2 focus:ring-[#540916]/10" />
+          </label>
+
+          <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs leading-5 text-blue-800">
+            Mode démonstration : ce formulaire permet uniquement de préparer un message. Aucun e-mail ne sera envoyé.
+          </div>
+
+          <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
+            <button type="button" onClick={() => definirModalOuvert(false)}
+              className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">
+              Annuler
+            </button>
+            <button type="submit"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#540916] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#700F20]">
+              <Send size={17} /> Prévisualiser l'envoi
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>}
     </div>
   );
 }

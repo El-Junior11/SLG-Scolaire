@@ -4,13 +4,13 @@ import { utiliserAuthentification } from "../contextes/ContexteAuthentification"
 import TarifsScolaires, { categoriesTarifs } from "./TarifsScolaires";
 import SuiviFrais from "./SuiviFrais";
 import Recus from "./Recus";
-import Icone from "../components/Icone";
+import { Wallet, CreditCard, AlertCircle, Receipt, Info } from "lucide-react";
 
 const vues = [
-  ["tarifs", "Tarifs", null, "Wallet"],
-  ["paiements", "Paiements", SuiviFrais, "CreditCard"],
-  ["impayes", "Impayés", SuiviFrais, "AlertCircle"],
-  ["recus", "Reçus", Recus, "Receipt"]
+  ["tarifs", "Tarifs", null, Wallet],
+  ["paiements", "Paiements", SuiviFrais, CreditCard],
+  ["impayes", "Impayés", SuiviFrais, AlertCircle],
+  ["recus", "Reçus", Recus, Receipt]
 ];
 
 export default function FraisScolaires({ categorie }) {
@@ -18,64 +18,79 @@ export default function FraisScolaires({ categorie }) {
   const [vue, , Contenu] = vues.find(([id]) => id === parametres.get("vue")) ?? vues[0];
   const { utilisateur } = utiliserAuthentification();
 
-  if (categorie === "ecolage") return <SuiviEcolage />;
+  if (categorie === "ecolage") return <SuiviEcolage/>;
 
   const titre = categoriesTarifs[categorie] ?? "Frais de scolarité";
 
-  return <section className="min-w-0 space-y-5">
-    {/* EN-TÊTE */}
-    <header className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#540916]/10 text-[#540916]">
-          <Icone nom="Wallet" taille={22} />
-        </div>
+  return (
+    <section className="flex h-[calc(100dvh-145px)] w-full min-h-0 min-w-0 flex-col gap-4 overflow-hidden">
+
+      {/* EN-TÊTE FIXE */}
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">
+          <h1 className="break-words text-2xl font-bold tracking-tight text-[#171717] dark:text-white sm:text-3xl"
+            style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
             {titre}
           </h1>
-          <p className="mt-0.5 text-xs text-slate-500">
-            Gestion des tarifs et suivi des opérations financières
+          <p className="mt-1 text-sm text-[#667085] dark:text-[#A8B7CF]">
+            Gestion des tarifs et suivi des opérations financières.
           </p>
         </div>
+      </header>
+
+      {/* ONGLETS FIXES */}
+      <div className="min-w-0 shrink-0 border-b border-[#EAE3E5] dark:border-[#263852]">
+        <nav aria-label="Vues des frais scolaires"
+          className="flex min-w-0 items-center gap-1 overflow-x-auto overscroll-x-contain sm:gap-3">
+
+          {vues.map(([id, libelle, , Icone]) => {
+            const actif = vue === id;
+
+            return (
+              <Link key={id}
+                to={{ search: id === "tarifs" ? "" : `?vue=${id}` }}
+                aria-current={actif ? "page" : undefined}
+                className={`inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap border-b-[3px] px-3 py-3 text-sm font-semibold transition-colors sm:px-4 ${
+                  actif
+                    ? "border-[#540916] text-[#540916] dark:border-[#60A5FA] dark:text-[#93C5FD]"
+                    : "border-transparent text-[#667085] hover:border-slate-300 hover:text-[#171717] dark:text-[#A8B7CF] dark:hover:border-[#405574] dark:hover:text-white"
+                }`}>
+                <Icone size={17} strokeWidth={1.8}/>
+                {libelle}
+              </Link>
+            );
+          })}
+        </nav>
       </div>
-    </header>
 
-    {/* ONGLETS */}
-    <div className="border-b border-slate-200">
-      <nav aria-label="Vues des frais scolaires"
-        className="flex items-center gap-1 overflow-x-auto sm:gap-5">
-        {vues.map(([id, libelle, , icone]) => {
-          const actif = vue === id;
+      {/* CONTENU À HAUTEUR CONTRÔLÉE */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
 
-          return <Link key={id}
-            to={{ search: id === "tarifs" ? "" : `?vue=${id}` }}
-            aria-current={actif ? "page" : undefined}
-            className={`relative inline-flex shrink-0 items-center justify-center gap-2 border-b-[3px] px-3 py-3 text-sm font-semibold transition sm:px-4 ${
-              actif
-                ? "border-[#540916] text-[#540916]"
-                : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800"
-            }`}>
-            <Icone nom={icone} taille={17} />
-            {libelle}
-          </Link>;
-        })}
-      </nav>
-    </div>
+        {Contenu ? (
+          <>
+            {categorie && vue === "recus" && (
+              <div className="mb-3 flex shrink-0 items-start gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2.5 text-xs text-blue-700 dark:border-[#30415C] dark:bg-[#1B2E4A] dark:text-[#C4D7FF]">
+                <Info size={16} className="mt-0.5 shrink-0"/>
+                <span>
+                  Les reçus sont affichés dans la vue globale de l'économat.
+                </span>
+              </div>
+            )}
 
-    {/* CONTENU */}
-    <div className="min-w-0">
-      {Contenu ? <>
-        {categorie && vue === "recus" && <div className="mb-4 flex items-center gap-2 rounded-lg bg-blue-50 px-4 py-3 text-xs text-blue-700">
-          <Icone nom="Info" taille={16} />
-          <span>Les reçus sont affichés dans la vue globale de l'économat.</span>
-        </div>}
-
-        <Contenu key={`${categorie ?? "tous"}-${vue}`}
-          categorie={categorie}
-          impayes={vue === "impayes"} />
-      </> : <TarifsScolaires key={categorie}
-        categorie={categorie}
-        modifiable={utilisateur?.role === "admin"} />}
-    </div>
-  </section>;
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+              <Contenu key={`${categorie ?? "tous"}-${vue}`}
+                categorie={categorie}
+                impayes={vue === "impayes"}/>
+            </div>
+          </>
+        ) : (
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            <TarifsScolaires key={categorie}
+              categorie={categorie}
+              modifiable={utilisateur?.role === "admin"}/>
+          </div>
+        )}
+      </div>
+    </section>
+  );
 }

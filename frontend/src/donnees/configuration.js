@@ -1,24 +1,27 @@
 export const ETABLISSEMENT = 'Saint Louis de Gonzague Mahasoabe';
 
 export const ROLES = {
-  admin: 'Secrétaire / Administrateur',
-  secretaire: 'Secrétaire / Administrateur',
+  admin: 'Super Administrateur / Secrétaire',
+  secretaire: 'Secrétaire',
   econome: 'Économe',
   titulaire: 'Titulaire de classe'
 };
 
+// Navigation principale
 const NAVIGATION_SECRETARIAT = [
-  ['tableau-de-bord', 'Tableau de bord', 'LayoutDashboard'],
   ['gestion-scolaire', 'Gestion scolaire', 'School'],
   ['administration', 'Administration', 'UserCog'],
-  ['rapports', 'Rapports', 'BarChart3'],
-  ['configuration', 'Configuration', 'Settings'],
-  ['mon-compte', 'Mon compte', 'UserRound']
+  ['rapports', 'Rapports administratifs', 'BarChart3']
 ];
 
 export const NAVIGATION = {
-  admin: NAVIGATION_SECRETARIAT,
-  secretaire: NAVIGATION_SECRETARIAT,
+  admin: [
+    ['tableau-de-bord', 'Tableau de bord', 'LayoutDashboard']
+  ],
+  secretaire: [
+    ['tableau-de-bord', 'Tableau de bord', 'LayoutDashboard'],
+    ...NAVIGATION_SECRETARIAT
+  ],
   econome: [
     ['tableau-de-bord', 'Tableau de bord', 'LayoutDashboard'],
     ['gestion-eleves', 'Gestion des élèves', 'Users'],
@@ -34,6 +37,7 @@ export const NAVIGATION = {
   ]
 };
 
+// Configuration des modules métier
 export const CONFIG_MODULES = {
   eleves: {
     titre: 'Gestion des élèves',
@@ -277,7 +281,7 @@ export const CONFIG_MODULES = {
   }
 };
 
-// Fonctionnalités regroupées dans les menus principaux.
+// Sous-menus de navigation
 export const GROUPES_NAVIGATION = {
   'gestion-scolaire': [
     ['eleves', 'Élèves'],
@@ -315,19 +319,24 @@ export const GROUPES_NAVIGATION = {
   ]
 };
 
-// Conservation des liens historiques pour la compatibilité.
+// Liens historiques conservés pour la compatibilité
 const NAVIGATION_HISTORIQUE = {
   admin: [
     ['eleves', 'Élèves', 'Users'],
-    ['classes', 'Classes', 'School'],
-    ['annees-scolaires', 'Années scolaires', 'CalendarDays'],
-    ['demandes', 'Demandes d’accès', 'UserCog']
-  ],
-  secretaire: [
-    ['eleves', 'Élèves', 'Users'],
+    ['inscriptions', 'Inscriptions', 'ClipboardList'],
     ['classes', 'Classes', 'School'],
     ['annees-scolaires', 'Années scolaires', 'CalendarDays'],
     ['utilisateurs', 'Utilisateurs', 'UserCog'],
+    ['demandes', 'Demandes d’accès', 'UserCog'],
+    ['rapports', 'Rapports administratifs', 'BarChart3']
+  ],
+  secretaire: [
+    ['eleves', 'Élèves', 'Users'],
+    ['inscriptions', 'Inscriptions', 'ClipboardList'],
+    ['classes', 'Classes', 'School'],
+    ['annees-scolaires', 'Années scolaires', 'CalendarDays'],
+    ['utilisateurs', 'Utilisateurs', 'UserCog'],
+    ['demandes', 'Demandes d’accès', 'UserCog'],
     ['parametres', 'Paramètres', 'Settings']
   ],
   econome: [
@@ -351,27 +360,41 @@ const NAVIGATION_HISTORIQUE = {
 
 const LIENS_HISTORIQUES = Object.fromEntries(
   Object.entries(NAVIGATION_HISTORIQUE).flatMap(([espace, liens]) =>
-    liens.map(([url, libelle, icone]) => [`/${espace}/${url}`, { espace, libelle, icone }])
+    liens.map(([url, libelle, icone]) => [
+      `/${espace}/${url}`, { espace, libelle, icone }
+    ])
   )
 );
 
+// Éléments exclus des sections du Super Administrateur
+const MENUS_EXCLUS = [
+  'tableau-de-bord', 'configuration', 'parametres',
+  'mon-compte', 'profil', 'notifications'
+];
+
+// Sections du Super Administrateur
 export const SECTIONS_ADMIN_DEFAUT = [
+  ['secretaire', 'Secrétariat'],
   ['econome', 'Économat'],
-  ['titulaire', 'Espace pédagogique'],
-  ['secretaire', 'Secrétariat']
+  ['titulaire', 'Espace pédagogique']
 ].map(([espace, titre]) => ({
   id: espace,
   titre,
-  liens: NAVIGATION[espace].map(([url]) => `/${espace}/${url}`)
+  liens: NAVIGATION[espace]
+    .filter(([url]) => !MENUS_EXCLUS.includes(url))
+    .map(([url]) => `/${espace}/${url}`)
 }));
 
+// Catalogue des liens disponibles pour les sections administratives
 export const LIENS_SECTIONS_ADMIN = {
   ...LIENS_HISTORIQUES,
   ...Object.fromEntries(
-    ['econome', 'titulaire', 'secretaire'].flatMap(espace =>
-      NAVIGATION[espace].map(([url, libelle, icone]) => [
-        `/${espace}/${url}`, { espace, libelle, icone }
-      ])
+    ['secretaire', 'econome', 'titulaire'].flatMap(espace =>
+      NAVIGATION[espace]
+        .filter(([url]) => !MENUS_EXCLUS.includes(url))
+        .map(([url, libelle, icone]) => [
+          `/${espace}/${url}`, { espace, libelle, icone }
+        ])
     )
   )
 };

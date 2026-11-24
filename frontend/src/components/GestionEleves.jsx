@@ -7,7 +7,7 @@ import { messageErreur, requetePrivee } from "../services/authentification";
 import { utiliserAuthentification } from "../contextes/ContexteAuthentification";
 
 const carte = "rounded-2xl border border-[#EAE3E5] bg-white shadow-sm dark:border-[#263852] dark:bg-[#14243D]";
-const champ = "w-full rounded-xl border border-[#E4E7EC] bg-white px-3 py-2.5 text-sm text-[#171717] outline-none focus:border-[#540916] dark:border-[#33445E] dark:bg-[#0B172B] dark:text-white";
+const champ = "w-full rounded-xl border border-[#E4E7EC] bg-white px-3 py-2.5 text-sm text-[#171717] outline-none focus:border-[#540916] dark:focus:border-[#93C5FD] dark:border-[#33445E] dark:bg-[#0B172B] dark:text-white";
 const bouton = "inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50";
 const vide = { matricule: "", nom: "", prenom: "", sexe: "", date_naissance: "", lieu_naissance: "", adresse: "", telephone: "", classe_id: "", statut: "Non inscrit" };
 const inscriptionVide = { eleve_id: "", annee_scolaire_id: "", classe_id: "", type: "Nouvelle inscription" };
@@ -36,7 +36,7 @@ function Fenetre({ titre, fermer, children }) {
       <div className={`${carte} flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden`}>
         <div className="flex shrink-0 items-center justify-between border-b border-[#EAE3E5] px-5 py-4 dark:border-[#263852]">
           <h2 className="text-lg font-bold text-[#171717] dark:text-white">{titre}</h2>
-          <button type="button" onClick={fermer} className="rounded-lg p-2 text-[#667085] hover:bg-gray-100 dark:hover:bg-[#263852]">
+          <button type="button" onClick={fermer} className="rounded-lg p-2 text-[#667085] hover:bg-gray-100 dark:text-[#A8B7CF] dark:hover:bg-[#263852]">
             <X size={19}/>
           </button>
         </div>
@@ -179,7 +179,7 @@ export default function GestionEleves() {
       text: `${eleve.nom || ""} ${eleve.prenom || ""}`,
       icon: "warning", showCancelButton: true,
       confirmButtonText: "Supprimer", cancelButtonText: "Annuler",
-      confirmButtonColor: "#B42318"
+      confirmButtonColor: document.documentElement.classList.contains("dark") ? "#29446D" : "#B42318"
     });
     if (!confirmation.isConfirmed) return;
 
@@ -203,7 +203,7 @@ export default function GestionEleves() {
         showCancelButton: true,
         confirmButtonText: "Supprimer définitivement",
         cancelButtonText: "Annuler",
-        confirmButtonColor: "#B42318",
+        confirmButtonColor: document.documentElement.classList.contains("dark") ? "#29446D" : "#B42318",
       });
       if (!confirmationTest.isConfirmed) return;
 
@@ -271,7 +271,7 @@ export default function GestionEleves() {
   };
 
   return (
-    <div className="flex h-[calc(100dvh-145px)] min-h-[420px] flex-col gap-4 overflow-hidden">
+    <div className="flex w-full min-w-0 flex-col gap-4 lg:h-[calc(100dvh-145px)] lg:min-h-[420px]">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-[#171717] dark:text-white"
@@ -280,29 +280,29 @@ export default function GestionEleves() {
             Gestion des dossiers scolaires et des inscriptions.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full min-w-0 flex-wrap gap-2 sm:w-auto">
           {peutGerer && <button onClick={() => ouvrirInscription(null)} className={`${bouton} border border-[#540916] text-[#540916] hover:bg-[#F8EDEF] dark:border-[#8FA9D1] dark:text-[#A8B7CF] dark:hover:bg-[#263852]`}>
             <UserPlus size={17}/> Inscrire / Réinscrire
           </button>}
-          {peutGerer && <button onClick={() => ouvrirFormulaire(null)} className={`${bouton} bg-[#540916] text-white hover:bg-[#701326]`}>
+          {peutGerer && <button onClick={() => ouvrirFormulaire(null)} className={`${bouton} bg-[#540916] text-white dark:bg-[#29446D] dark:hover:bg-[#365781] hover:bg-[#701326]`}>
             <Plus size={17}/> Nouvel élève
           </button>}
         </div>
       </div>
 
-      <section className={`${carte} flex min-h-0 flex-1 flex-col overflow-hidden`}>
+      <section className={`${carte} flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden`}>
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#EAE3E5] p-4 dark:border-[#263852]">
-          <div className="relative min-w-[180px] flex-1 sm:max-w-sm">
+          <div className="relative w-full min-w-0 lg:max-w-sm lg:flex-1">
             <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#98A2B3]"/>
             <input value={recherche} onChange={e => setRecherche(e.target.value)} placeholder="Rechercher un élève..."
               className={`${champ} pl-10`}/>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <select value={filtreClasse} onChange={e => setFiltreClasse(e.target.value)} className={`${champ} w-auto max-w-[170px]`}>
+          <div className="flex w-full min-w-0 flex-wrap gap-2 sm:w-auto">
+            <select value={filtreClasse} onChange={e => setFiltreClasse(e.target.value)} className={`${champ} !w-auto min-w-0 max-w-full sm:max-w-[170px]`}>
               <option value="Tous">Toutes les classes</option>
               {classes.map(c => <option key={idClasse(c)} value={c.nom}>{c.nom}</option>)}
             </select>
-            <select value={filtreStatut} onChange={e => setFiltreStatut(e.target.value)} className={`${champ} w-auto max-w-[170px]`}>
+            <select value={filtreStatut} onChange={e => setFiltreStatut(e.target.value)} className={`${champ} !w-auto min-w-0 max-w-full sm:max-w-[170px]`}>
               <option value="Tous">Tous les statuts</option>
               {statuts.map(s => <option key={s}>{s}</option>)}
             </select>
@@ -318,37 +318,38 @@ export default function GestionEleves() {
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto overscroll-contain">
-          <table className="w-full min-w-[850px] border-collapse text-left text-sm">
+        <div className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain max-h-[65dvh] lg:max-h-none">
+          <table className="w-full min-w-[740px] border-separate border-spacing-0 text-left text-sm">
             <thead className="sticky top-0 z-10 bg-[#F8F9FC] text-xs uppercase text-[#667085] dark:bg-[#0B172B] dark:text-[#A8B7CF]">
               <tr>
-                {["Matricule", "Nom et prénom", "Sexe", "Classe", "Statut", "Actions"].map(t => (
-                  <th key={t} className="px-5 py-3 font-bold">{t}</th>
+                {["Matricule", "Nom et prénom", "Sexe", "Classe", "Statut"].map(t => (
+                  <th key={t} scope="col" className="whitespace-nowrap px-3 py-3 font-bold sm:px-5">{t}</th>
                 ))}
+                <th scope="col" className="sticky right-0 z-20 w-px whitespace-nowrap bg-[#F8F9FC] px-2 py-3 text-right font-bold dark:bg-[#0B172B] sm:px-5">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F0EAEC] dark:divide-[#263852]">
               {!chargement && !erreur && lignes.map(e => (
-                <tr key={identifiant(e)} className="hover:bg-[#FAF8F9] dark:hover:bg-[#1B2C46]">
-                  <td className="px-5 py-3 font-semibold text-[#540916] dark:text-[#93C5FD]">{e.matricule || "—"}</td>
-                  <td className="px-5 py-3 font-semibold text-[#171717] dark:text-white">{e.nom} {e.prenom}</td>
-                  <td className="px-5 py-3 text-[#667085] dark:text-[#A8B7CF]">{e.sexe || "—"}</td>
-                  <td className="px-5 py-3 text-[#667085] dark:text-[#A8B7CF]">{nomClasse(e)}</td>
+                <tr key={identifiant(e)} className="group hover:bg-[#FAF8F9] dark:hover:bg-[#1B2C46]">
+                  <td className="px-3 py-3 sm:px-5 font-semibold text-[#540916] dark:text-[#93C5FD]">{e.matricule || "—"}</td>
+                  <td className="px-3 py-3 sm:px-5 font-semibold text-[#171717] dark:text-white">{e.nom} {e.prenom}</td>
+                  <td className="px-3 py-3 sm:px-5 text-[#667085] dark:text-[#A8B7CF]">{e.sexe || "—"}</td>
+                  <td className="px-3 py-3 sm:px-5 text-[#667085] dark:text-[#A8B7CF]">{nomClasse(e)}</td>
                   <td className="px-5 py-3">
                     <span className="rounded-full bg-[#F2F4F7] px-3 py-1 text-xs font-bold text-[#475467] dark:bg-[#263852] dark:text-[#A8B7CF]">
                       {e.statut || "Non renseigné"}
                     </span>
                   </td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-1">
+                  <td className="sticky right-0 z-[1] w-px whitespace-nowrap bg-white px-2 py-3 text-right group-hover:bg-[#FAF8F9] dark:bg-[#14243D] dark:group-hover:bg-[#1B2C46] sm:px-5">
+                    <div className="flex items-center justify-end gap-0.5 sm:gap-1">
                       <button title="Détails" onClick={() => { setSelection(e); setFenetre("details"); }}
-                        className="rounded-lg p-2 text-[#667085] hover:bg-gray-100 dark:hover:bg-[#263852]"><Eye size={17}/></button>
+                        className="rounded-lg p-2 text-[#667085] hover:bg-gray-100 dark:text-[#A8B7CF] dark:hover:bg-[#263852]"><Eye size={17}/></button>
                       {peutGerer && <button title="Modifier" onClick={() => ouvrirFormulaire(e)}
-                        className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-[#263852]"><Pencil size={17}/></button>}
+                        className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-[#263852]"><Pencil size={17}/></button>}
                       {peutGerer && <button title="Inscrire / Réinscrire" onClick={() => ouvrirInscription(e)}
-                        className="rounded-lg p-2 text-green-600 hover:bg-green-50 dark:hover:bg-[#263852]"><UserPlus size={17}/></button>}
+                        className="rounded-lg p-2 text-green-600 hover:bg-green-50 dark:text-emerald-300 dark:hover:bg-[#263852]"><UserPlus size={17}/></button>}
                       {peutGerer && <button title="Supprimer" onClick={() => supprimer(e)}
-                        className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:hover:bg-[#263852]"><Trash2 size={17}/></button>}
+                        className="rounded-lg p-1.5 text-red-600 hover:bg-red-50 dark:text-slate-300 dark:hover:bg-[#263852] sm:p-2"><Trash2 size={17}/></button>}
                     </div>
                   </td>
                 </tr>
@@ -363,9 +364,9 @@ export default function GestionEleves() {
           )}
           {!chargement && erreur && (
             <div className="p-10 text-center">
-              <p className="text-sm font-semibold text-red-600">Impossible de charger les données.</p>
+              <p className="text-sm font-semibold text-red-600 dark:text-slate-200">Impossible de charger les données.</p>
               <p className="mt-2 text-xs text-[#667085] dark:text-[#A8B7CF]">{erreur}</p>
-              <button onClick={charger} className={`${bouton} mt-4 bg-[#540916] text-white`}>Réessayer</button>
+              <button onClick={charger} className={`${bouton} mt-4 bg-[#540916] text-white dark:bg-[#29446D] dark:hover:bg-[#365781]`}>Réessayer</button>
             </div>
           )}
           {!chargement && !erreur && !lignes.length && (
@@ -429,10 +430,10 @@ export default function GestionEleves() {
                   className={`${champ} resize-none`}/>
               </Champ>
             </div>
-            <div className="sm:col-span-2 flex justify-end gap-2 border-t border-[#EAE3E5] pt-4 dark:border-[#263852]">
+            <div className="sm:col-span-2 flex flex-wrap justify-end gap-2 border-t border-[#EAE3E5] pt-4 dark:border-[#263852]">
               <button type="button" disabled={enCours} onClick={() => setFenetre(null)}
                 className={`${bouton} border border-[#E4E7EC] text-[#344054] dark:border-[#33445E] dark:text-white`}>Annuler</button>
-              <button type="submit" disabled={enCours} className={`${bouton} bg-[#540916] px-5 text-white`}>
+              <button type="submit" disabled={enCours} className={`${bouton} bg-[#540916] px-5 text-white dark:bg-[#29446D] dark:hover:bg-[#365781]`}>
                 {enCours ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>} Enregistrer
               </button>
             </div>
@@ -467,11 +468,11 @@ export default function GestionEleves() {
                 {classes.map(c => <option key={idClasse(c)} value={idClasse(c)}>{c.nom}</option>)}
               </select>
             </Champ>
-            <div className="sm:col-span-2 flex justify-end gap-2 border-t border-[#EAE3E5] pt-4 dark:border-[#263852]">
+            <div className="sm:col-span-2 flex flex-wrap justify-end gap-2 border-t border-[#EAE3E5] pt-4 dark:border-[#263852]">
               <button type="button" disabled={enCours} onClick={() => setFenetre(null)}
                 className={`${bouton} border border-[#E4E7EC] text-[#344054] dark:border-[#33445E] dark:text-white`}>Annuler</button>
               <button type="submit" disabled={enCours || !eleves.length || !classes.length || !annees.length}
-                className={`${bouton} bg-[#540916] px-5 text-white`}>
+                className={`${bouton} bg-[#540916] px-5 text-white dark:bg-[#29446D] dark:hover:bg-[#365781]`}>
                 {enCours ? <Loader2 size={16} className="animate-spin"/> : <UserPlus size={16}/>} Valider l'inscription
               </button>
             </div>

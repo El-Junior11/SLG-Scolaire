@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, X, Save, Search, CalendarDays, Settings2, Wallet } from "lucide-react";
+import { Plus, X, Save, Search, CalendarDays, Settings2, Wallet, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { utiliserAuthentification } from "../contextes/ContexteAuthentification";
 import { messageErreur, requetePrivee } from "../services/authentification";
 
@@ -13,7 +13,19 @@ const statuts = {
 };
 
 const moments = { avance: "En avance", retard: "En retard", delai: "Dans le délai" };
-const champ = "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#540916] focus:ring-2 focus:ring-[#540916]/10 dark:border-slate-600 dark:bg-slate-800 dark:text-white";
+const carte = "rounded-2xl border border-[#EAE3E5] bg-white shadow-sm dark:border-[#263852] dark:bg-[#14243D]";
+const texte = "text-[#171717] dark:text-white";
+const secondaire = "text-[#667085] dark:text-[#A8B7CF]";
+const bordure = "border-[#EAE3E5] dark:border-[#263852]";
+const accent = "text-[#540916] dark:text-[#93C5FD]";
+const champ = "h-10 w-full min-w-0 rounded-lg border border-[#E4E7EC] bg-white px-3 text-sm text-[#171717] outline-none transition-colors focus:border-[#540916] dark:border-[#33445E] dark:bg-[#0B172B] dark:text-white dark:focus:border-[#60A5FA] dark:[color-scheme:dark]";
+const bouton = "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50";
+const principal = "bg-[#540916] text-white hover:bg-[#74172A] dark:bg-[#29446D] dark:hover:bg-[#365582]";
+const contour = "border border-[#E4E7EC] bg-white text-[#344054] hover:bg-slate-50 dark:border-[#33445E] dark:bg-[#14243D] dark:text-[#C4D7FF] dark:hover:bg-[#263852]";
+const cellule = "whitespace-nowrap border-b border-[#EAE3E5] px-4 py-1.5 dark:border-[#263852]";
+const label = "block min-w-0 space-y-1.5 text-xs font-semibold text-[#344054] dark:text-[#A8B7CF]";
+const styleErreur = "rounded-lg border border-red-100 bg-red-50 p-3 text-sm text-red-700 dark:border-[#405574] dark:bg-[#1B2E4A] dark:text-[#C4D7FF]";
+
 const nombre = new Intl.NumberFormat("fr-FR");
 const dateCourte = date => date?.split("-").reverse().join("/") || "—";
 const formatMontant = montant => montant == null ? "—" : `${nombre.format(montant)} Ar`;
@@ -31,11 +43,11 @@ function moisActuel() {
 
 function badgeStatut(statut) {
   const styles = {
-    paye: "bg-emerald-50 text-emerald-700",
-    partiel: "bg-amber-50 text-amber-700",
-    impaye: "bg-slate-100 text-slate-600",
-    sansTarif: "bg-blue-50 text-blue-700",
-    retard: "bg-red-50 text-red-700"
+    paye: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
+    partiel: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300",
+    impaye: "bg-slate-100 text-slate-600 dark:bg-[#263852] dark:text-[#A8B7CF]",
+    sansTarif: "bg-blue-50 text-blue-700 dark:bg-[#29446D] dark:text-[#93C5FD]",
+    retard: "bg-red-50 text-red-700 dark:bg-[#263852] dark:text-[#C4D7FF]"
   };
   return styles[statut] || styles.impaye;
 }
@@ -44,19 +56,27 @@ export default function SuiviEcolage() {
   const { utilisateur } = utiliserAuthentification();
   const [mois, definirMois] = useState(moisActuel);
 
-  return <section className="min-w-0 space-y-5">
-    <header className="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">Écolage</h1>
-        <p className="mt-1 text-sm text-slate-500">Suivi mensuel des paiements de scolarité.</p>
+  return <section className="flex w-full min-w-0 flex-col gap-4 lg:h-[calc(100dvh-145px)] lg:min-h-0 lg:overflow-hidden">
+
+    {/* EN-TÊTE FIXE */}
+    <header className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+      <div className="min-w-0">
+        <h1 className={`text-2xl font-bold tracking-tight sm:text-3xl ${texte}`}
+          style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+          Écolage
+        </h1>
+        <p className={`mt-1 text-sm ${secondaire}`}>
+          Suivi mensuel des paiements de scolarité.
+        </p>
       </div>
+
       {utilisateur?.role === "admin" && <Link to="/admin/configuration"
-        className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
-        <Settings2 size={16} /> Configurer les tarifs
+        className={`${bouton} ${contour} w-full sm:w-auto`}>
+        <Settings2 size={16}/> Configurer les tarifs
       </Link>}
     </header>
 
-    <SuiviMensuel key={mois} mois={mois} definirMois={definirMois} />
+    <SuiviMensuel key={mois} mois={mois} definirMois={definirMois}/>
   </section>;
 }
 
@@ -76,10 +96,12 @@ function SuiviMensuel({ mois, definirMois }) {
   const eleves = suivi?.lignes ?? [];
   const enRetard = eleve => Boolean(suivi?.echeanceDepassee && eleve.du != null && eleve.paye < eleve.du);
 
+  // CHARGEMENT DES DONNÉES
   useEffect(() => {
     const controleur = new AbortController();
     definirChargement(true);
     definirErreur("");
+
     requetePrivee("/ecolage", { params: { mois }, signal: controleur.signal })
       .then(resultat => {
         if (!Array.isArray(resultat?.lignes)) throw new Error("Réponse incorrecte de l’API de suivi.");
@@ -91,15 +113,23 @@ function SuiviMensuel({ mois, definirMois }) {
           definirErreur(messageErreur(cause));
         }
       })
-      .finally(() => { if (!controleur.signal.aborted) definirChargement(false); });
+      .finally(() => {
+        if (!controleur.signal.aborted) definirChargement(false);
+      });
+
     return () => controleur.abort();
   }, [mois, revision]);
 
+  // GESTION DU MODAL
   useEffect(() => {
     if (!formulaire) return;
     const ancien = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const clavier = event => { if (event.key === "Escape" && !enCours) definirFormulaire(null); };
+
+    const clavier = event => {
+      if (event.key === "Escape" && !enCours) definirFormulaire(null);
+    };
+
     document.addEventListener("keydown", clavier);
     return () => {
       document.body.style.overflow = ancien;
@@ -107,6 +137,7 @@ function SuiviMensuel({ mois, definirMois }) {
     };
   }, [Boolean(formulaire), enCours]);
 
+  // FILTRES
   const niveaux = [...new Set(eleves.map(eleve => eleve.niveau).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, "fr", { numeric: true }));
 
@@ -119,27 +150,34 @@ function SuiviMensuel({ mois, definirMois }) {
 
   const moisVersement = formulaire?.mois;
 
+  // CHARGEMENT DU SOLDE D'UN AUTRE MOIS
   useEffect(() => {
     if (!moisVersement || moisVersement === mois) return;
     const controleur = new AbortController();
     definirAutreSuivi(null);
+
     requetePrivee("/ecolage", { params: { mois: moisVersement }, signal: controleur.signal })
       .then(resultat => {
         if (!Array.isArray(resultat?.lignes)) throw new Error("Réponse incorrecte de l’API de suivi.");
         if (!controleur.signal.aborted) definirAutreSuivi({ mois: moisVersement, lignes: resultat.lignes });
       })
       .catch(cause => {
-        if (!controleur.signal.aborted) definirAutreSuivi({ mois: moisVersement, erreur: messageErreur(cause) });
+        if (!controleur.signal.aborted) definirAutreSuivi({
+          mois: moisVersement, erreur: messageErreur(cause)
+        });
       });
+
     return () => controleur.abort();
   }, [mois, moisVersement]);
 
   const suiviVersement = moisVersement === mois ? suivi
     : autreSuivi?.mois === moisVersement ? autreSuivi : null;
+
   const candidats = suiviVersement?.lignes ?? [];
-  const selection = candidats.find(eleve => eleve.id === formulaire?.eleveId);
+  const selection = candidats.find(eleve => String(eleve.id) === String(formulaire?.eleveId));
   const reste = selection?.du == null ? null : selection.du - selection.paye;
   const peutPayer = reste != null && reste > 0;
+
   const moisLisible = moisVersement && new Intl.DateTimeFormat("fr-FR", {
     month: "long", year: "numeric", timeZone: "UTC"
   }).format(new Date(`${moisVersement}-01T00:00:00Z`));
@@ -150,17 +188,33 @@ function SuiviMensuel({ mois, definirMois }) {
     definirFormulaire({ eleveId, mois, montant: "", operationId: crypto.randomUUID() });
   }
 
+  function reinitialiserFiltres() {
+    definirNiveau("");
+    definirStatut("");
+    definirRecherche("");
+  }
+
+  // ENREGISTREMENT DU VERSEMENT
   async function enregistrer(evenement) {
     evenement.preventDefault();
     if (!peutPayer || enCours) return;
+
+    const montant = Number(formulaire.montant);
+
+    if (!Number.isInteger(montant) || montant <= 0 || montant > reste) {
+      definirErreur("Veuillez saisir un montant valide, inférieur ou égal au reste à payer.");
+      return;
+    }
+
     definirEnCours(true);
     definirErreur("");
 
     try {
       await requetePrivee("/ecolage/versements", {
         method: "POST",
-        data: { ...formulaire, montant: Number(formulaire.montant) }
+        data: { ...formulaire, montant }
       });
+
       definirFormulaire(null);
       definirConfirmation(`Versement enregistré pour ${moisLisible}.`);
       definirChargement(true);
@@ -172,180 +226,390 @@ function SuiviMensuel({ mois, definirMois }) {
     }
   }
 
-  return <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
-    {/* FILTRES */}
-    <div className="flex flex-wrap items-end gap-3 border-b border-slate-100 p-4 dark:border-slate-700">
-      <label className="space-y-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
-        <span className="flex items-center gap-1.5"><CalendarDays size={14} /> Mois</span>
-        <input type="month" className={champ} value={mois}
-          onChange={event => { if (event.target.value) definirMois(event.target.value); }} />
-      </label>
+  return <section className={`${carte} flex min-h-0 min-w-0 flex-col overflow-hidden`}>
 
-      <label className="space-y-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
-        <span>Niveau</span>
-        <select className={champ} value={niveau} onChange={event => definirNiveau(event.target.value)}>
-          <option value="">Tous les niveaux</option>
-          {niveaux.map(valeur => <option key={valeur} value={valeur}>{valeur}</option>)}
-        </select>
-      </label>
+    {/* FILTRES FIXES */}
+    <div className={`shrink-0 border-b p-3 sm:p-4 ${bordure}`}>
+      <div className="grid min-w-0 grid-cols-1 items-end gap-3 sm:grid-cols-2 xl:grid-cols-[150px_150px_170px_minmax(150px,1fr)_auto]">
 
-      <label className="space-y-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
-        <span>Statut</span>
-        <select className={champ} value={statut} onChange={event => definirStatut(event.target.value)}>
-          <option value="">Tous les statuts</option>
-          {Object.entries(statuts).map(([id, libelle]) =>
-            <option key={id} value={id}>{libelle}</option>
-          )}
-        </select>
-      </label>
+        <label className={label}>
+          <span className="flex items-center gap-1.5">
+            <CalendarDays size={14}/> Mois
+          </span>
+          <input type="month" className={champ} value={mois}
+            onChange={event => {
+              if (event.target.value) definirMois(event.target.value);
+            }}/>
+        </label>
 
-      <label className="relative min-w-[180px] flex-1 space-y-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
-        <span>Recherche</span>
-        <span className="relative block">
-          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input type="search" className={`${champ} pl-9`} value={recherche}
-            placeholder="Nom, classe, matricule..."
-            onChange={event => definirRecherche(event.target.value)} />
-        </span>
-      </label>
+        <label className={label}>
+          <span>Niveau</span>
+          <select className={champ} value={niveau}
+            onChange={event => definirNiveau(event.target.value)}>
+            <option value="">Tous les niveaux</option>
+            {niveaux.map(valeur => <option key={valeur} value={valeur}>{valeur}</option>)}
+          </select>
+        </label>
 
-      <button type="button" disabled={chargement || enCours || !eleves.length}
-        onClick={() => ajouter()}
-        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#540916] px-4 text-sm font-semibold text-white hover:bg-[#74172A] disabled:opacity-50">
-        <Plus size={17} /> Ajouter un versement
-      </button>
+        <label className={label}>
+          <span>Statut</span>
+          <select className={champ} value={statut}
+            onChange={event => definirStatut(event.target.value)}>
+            <option value="">Tous les statuts</option>
+            {Object.entries(statuts).map(([id, libelle]) =>
+              <option key={id} value={id}>{libelle}</option>
+            )}
+          </select>
+        </label>
+
+        <label className={label}>
+          <span>Recherche</span>
+          <span className="relative block">
+            <Search size={16}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#98A2B3]"/>
+            <input type="search" className={`${champ} pl-9`}
+              value={recherche} placeholder="Nom, classe, matricule..."
+              onChange={event => definirRecherche(event.target.value)}/>
+          </span>
+        </label>
+
+        <button type="button" disabled={chargement || enCours || !eleves.length}
+          onClick={() => ajouter()}
+          className={`${bouton} ${principal} h-10 whitespace-nowrap sm:col-span-2 xl:col-span-1`}>
+          <Plus size={17}/> Ajouter un versement
+        </button>
+      </div>
     </div>
 
-    {suivi && <div className="border-b border-slate-100 px-4 py-2.5 text-xs text-slate-500 dark:border-slate-700">
-      Échéance du mois : <span className="font-semibold text-slate-700 dark:text-slate-200">{dateCourte(suivi.echeance)}</span>
-      <span className="ml-3">{lignes.length} élève(s)</span>
+    {/* INFORMATIONS DU MOIS */}
+    {suivi && <div className={`flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-4 py-3 text-xs ${bordure} ${secondaire}`}>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span className="inline-flex items-center gap-2">
+          <CalendarDays size={15} className={accent}/>
+          Échéance du mois :
+          <strong className={texte}>{dateCourte(suivi.echeance)}</strong>
+        </span>
+
+        <span>{lignes.length} élève(s)</span>
+      </div>
+
+      {(niveau || statut || recherche) && <button type="button"
+        onClick={reinitialiserFiltres}
+        className={`inline-flex items-center gap-1 font-semibold hover:underline ${accent}`}>
+        <X size={14}/> Effacer les filtres
+      </button>}
     </div>}
 
-    {erreur && !formulaire && <p role="alert" className="m-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{erreur}</p>}
-    {confirmation && <p role="status" className="m-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">{confirmation}</p>}
+    {/* MESSAGES */}
+    {erreur && !formulaire && <div role="alert"
+      className={`${styleErreur} m-3 flex shrink-0 items-start gap-2`}>
+      <AlertCircle size={17} className="mt-0.5 shrink-0"/>
+      <span>{erreur}</span>
+    </div>}
 
-    {/* TABLEAU */}
-    {chargement ? <p role="status" className="p-6 text-sm text-slate-500">Chargement des élèves…</p>
-      : <div className="overflow-x-auto">
-        <table className="w-full min-w-[1080px] text-left text-sm">
-          <thead className="bg-slate-50 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-            <tr>
-              {["Élève", "Classe", "Niveau", "Montant dû", "Versé", "Reste", "Statut", "Dernier versement", "Action"]
-                .map(titre => <th key={titre} scope="col" className="px-4 py-3">{titre}</th>)}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-            {lignes.map(eleve => {
-              const statutActuel = statutEleve(eleve);
-              const retard = enRetard(eleve);
-              return <tr key={eleve.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50">
-                <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">
+    {confirmation && <div role="status"
+      className="m-3 flex shrink-0 items-center gap-2 rounded-lg border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+      <CheckCircle2 size={18} className="shrink-0"/>
+      <span className="flex-1">{confirmation}</span>
+      <button type="button" onClick={() => definirConfirmation("")}
+        aria-label="Fermer la confirmation">
+        <X size={16}/>
+      </button>
+    </div>}
+
+    {/* TABLEAU : SCROLL VERTICAL ET HORIZONTAL */}
+    <div className="min-h-0 min-w-0 max-h-[272px] overflow-auto overscroll-contain">
+
+      <table className="w-full min-w-[1080px] border-separate border-spacing-0 text-left text-sm">
+
+        {/* EN-TÊTE FIXE */}
+        <thead className="sticky top-0 z-10 bg-[#F8F9FC] text-xs font-semibold text-[#667085] dark:bg-[#0B172B] dark:text-[#A8B7CF]">
+          <tr className="h-12">
+            {["Élève", "Classe", "Niveau", "Montant dû", "Versé", "Reste", "Statut", "Dernier versement"]
+              .map(titre => <th key={titre} scope="col"
+                className={`whitespace-nowrap border-b px-4 font-bold ${bordure}`}>
+                {titre}
+              </th>)}
+
+            <th scope="col"
+              className={`sticky right-0 z-20 w-[80px] whitespace-nowrap border-b bg-[#F8F9FC] px-4 text-right font-bold dark:bg-[#0B172B] ${bordure}`}>
+              Actions
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {!chargement && lignes.map(eleve => {
+            const statutActuel = statutEleve(eleve);
+            const retard = enRetard(eleve);
+
+            return <tr key={eleve.id}
+              className="group h-14 transition-colors hover:bg-[#FAF8F9] dark:hover:bg-[#1B2C46]">
+
+              {/* ÉLÈVE */}
+              <td className={`${cellule} font-semibold ${texte}`}>
+                <div className="leading-5">
                   {eleve.nom} {eleve.prenom}
-                  {eleve.matricule && <span className="mt-0.5 block text-xs font-normal text-slate-400">{eleve.matricule}</span>}
-                </td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{eleve.classe || "—"}</td>
-                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{eleve.niveau || "—"}</td>
-                <td className="px-4 py-3 font-medium">{formatMontant(eleve.du)}</td>
-                <td className="px-4 py-3 font-medium">{formatMontant(eleve.paye)}</td>
-                <td className="px-4 py-3 font-semibold">{formatMontant(eleve.du == null ? null : eleve.du - eleve.paye)}</td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex rounded-md px-2.5 py-1 text-xs font-semibold ${badgeStatut(statutActuel)}`}>
-                    {eleve.ambigu ? "Plusieurs tarifs applicables" : statuts[statutActuel]}
-                  </span>
-                  {retard && <span className="mt-1 block text-xs font-semibold text-red-600">En retard</span>}
-                </td>
-                <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300">
-                  {eleve.dernierVersement
-                    ? `${dateCourte(eleve.dernierVersement.date)} · ${moments[eleve.dernierVersement.moment]}`
-                    : "—"}
-                </td>
-                <td className="px-4 py-3 text-center">
+                </div>
+                {eleve.matricule && <span className={`block text-xs font-normal leading-4 ${secondaire}`}>
+                  {eleve.matricule}
+                </span>}
+              </td>
+
+              {/* CLASSE */}
+              <td className={`${cellule} ${secondaire}`}>
+                {eleve.classe || "—"}
+              </td>
+
+              {/* NIVEAU */}
+              <td className={`${cellule} ${secondaire}`}>
+                {eleve.niveau || "—"}
+              </td>
+
+              {/* MONTANT DÛ */}
+              <td className={`${cellule} font-semibold ${texte}`}>
+                {formatMontant(eleve.du)}
+              </td>
+
+              {/* MONTANT VERSÉ */}
+              <td className={`${cellule} font-semibold text-emerald-600 dark:text-emerald-300`}>
+                {formatMontant(eleve.paye)}
+              </td>
+
+              {/* RESTE */}
+              <td className={`${cellule} font-bold ${eleve.du != null && eleve.du > eleve.paye ? accent : texte}`}>
+                {formatMontant(eleve.du == null ? null : eleve.du - eleve.paye)}
+              </td>
+
+              {/* STATUT */}
+              <td className={cellule}>
+                <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-semibold ${badgeStatut(statutActuel)}`}>
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current"/>
+                  {eleve.ambigu ? "Plusieurs tarifs applicables" : statuts[statutActuel]}
+                </span>
+
+                {retard && <span className="block text-[11px] font-semibold leading-4 text-red-600 dark:text-[#93C5FD]">
+                  En retard
+                </span>}
+              </td>
+
+              {/* DERNIER VERSEMENT */}
+              <td className={`${cellule} text-xs ${secondaire}`}>
+                {eleve.dernierVersement
+                  ? `${dateCourte(eleve.dernierVersement.date)} · ${moments[eleve.dernierVersement.moment]}`
+                  : "—"}
+              </td>
+
+              {/* ACTIONS STICKY À DROITE */}
+              <td className={`sticky right-0 z-[1] w-[80px] whitespace-nowrap border-b bg-white px-4 py-1.5 text-right group-hover:bg-[#FAF8F9] dark:bg-[#14243D] dark:group-hover:bg-[#1B2C46] ${bordure}`}>
+                <div className="flex items-center justify-end">
+
                   {eleve.du != null && eleve.paye < eleve.du && <button type="button"
                     disabled={enCours} onClick={() => ajouter(eleve.id)}
-                    title="Ajouter un versement" aria-label={`Ajouter un versement pour ${eleve.nom} ${eleve.prenom}`}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#540916] hover:bg-[#540916]/10 disabled:opacity-40">
-                    <Plus size={17} />
+                    title="Ajouter un versement"
+                    aria-label={`Ajouter un versement pour ${eleve.nom} ${eleve.prenom}`}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#540916]/10 text-[#540916] transition-colors hover:bg-[#540916] hover:text-white disabled:opacity-40 dark:bg-[#29446D] dark:text-[#93C5FD] dark:hover:bg-[#365582]">
+                    <Plus size={18}/>
                   </button>}
-                </td>
-              </tr>;
-            })}
-            {!lignes.length && <tr><td colSpan={9} className="px-4 py-10 text-center text-sm text-slate-500">
-              {erreur ? "Liste indisponible." : "Aucun élève ne correspond aux filtres."}
-            </td></tr>}
-          </tbody>
-        </table>
-      </div>}
+                </div>
+              </td>
+            </tr>;
+          })}
 
-    {/* MODAL VERSEMENT */}
-    {formulaire && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-[2px]"
-      onMouseDown={event => { if (event.target === event.currentTarget && !enCours) definirFormulaire(null); }}>
+          {/* CHARGEMENT */}
+          {chargement && <tr>
+            <td colSpan={9} className="h-[224px] px-4 text-center">
+              <div role="status" className={`flex items-center justify-center gap-2 text-sm ${secondaire}`}>
+                <Loader2 size={19} className="animate-spin"/>
+                Chargement des élèves...
+              </div>
+            </td>
+          </tr>}
+
+          {/* AUCUNE DONNÉE */}
+          {!chargement && !lignes.length && <tr>
+            <td colSpan={9} className="h-[224px] px-4 text-center">
+              <div className="flex flex-col items-center justify-center gap-2">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-[#98A2B3] dark:bg-[#263852] dark:text-[#A8B7CF]">
+                  <Wallet size={24}/>
+                </div>
+
+                <p className={`text-sm font-semibold ${texte}`}>
+                  {erreur ? "Liste indisponible." : "Aucun élève trouvé"}
+                </p>
+
+                <p className={`text-xs ${secondaire}`}>
+                  {erreur
+                    ? "Impossible de récupérer les données."
+                    : "Aucun élève ne correspond aux filtres sélectionnés."}
+                </p>
+
+                {!erreur && (niveau || statut || recherche) && <button type="button"
+                  onClick={reinitialiserFiltres}
+                  className={`mt-1 text-xs font-semibold hover:underline ${accent}`}>
+                  Réinitialiser les filtres
+                </button>}
+              </div>
+            </td>
+          </tr>}
+        </tbody>
+      </table>
+    </div>
+
+    {/* PIED DU TABLEAU FIXE */}
+    <footer className={`flex shrink-0 flex-wrap items-center justify-between gap-2 border-t px-4 py-3 text-xs ${bordure} ${secondaire}`}>
+      <span>{lignes.length} élève(s) sur {eleves.length}</span>
+
+      {lignes.length > 4 && <span>
+        Faites défiler pour consulter les autres élèves
+      </span>}
+    </footer>
+
+    {/* MODAL DE VERSEMENT */}
+    {formulaire && <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#101828]/65 p-3 backdrop-blur-sm sm:p-5"
+      onMouseDown={event => {
+        if (event.target === event.currentTarget && !enCours) definirFormulaire(null);
+      }}>
+
       <div role="dialog" aria-modal="true" aria-labelledby="titre-modal-versement"
-        className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900">
-        <header className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-700">
-          <div>
-            <h2 id="titre-modal-versement" className="text-lg font-bold text-slate-900 dark:text-white">Ajouter un versement</h2>
-            <p className="mt-1 text-xs text-slate-500">Enregistrer un paiement d'écolage.</p>
+        className={`${carte} flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden shadow-xl`}>
+
+        {/* EN-TÊTE DU MODAL */}
+        <header className={`flex shrink-0 items-center justify-between gap-3 border-b p-4 sm:p-5 ${bordure}`}>
+
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#540916]/10 text-[#540916] dark:bg-[#29446D] dark:text-[#93C5FD]">
+              <Wallet size={22}/>
+            </div>
+
+            <div className="min-w-0">
+              <h2 id="titre-modal-versement" className={`text-lg font-bold ${texte}`}>
+                Ajouter un versement
+              </h2>
+              <p className={`mt-1 text-xs ${secondaire}`}>
+                Enregistrer un paiement d'écolage.
+              </p>
+            </div>
           </div>
-          <button type="button" disabled={enCours} onClick={() => definirFormulaire(null)} aria-label="Fermer"
-            className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
-            <X size={19} />
+
+          <button type="button" disabled={enCours}
+            onClick={() => definirFormulaire(null)} aria-label="Fermer"
+            className={`shrink-0 rounded-lg p-2 hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-[#263852] ${secondaire}`}>
+            <X size={19}/>
           </button>
         </header>
 
-        <form onSubmit={enregistrer}>
-          <fieldset disabled={enCours || chargement} className="grid gap-4 p-5 sm:grid-cols-2">
-            <label className="space-y-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
-              <span>Mois concerné</span>
+        {/* FORMULAIRE */}
+        <form onSubmit={enregistrer} className="flex min-h-0 flex-col">
+
+          <fieldset disabled={enCours || chargement}
+            className="grid min-h-0 min-w-0 gap-4 overflow-y-auto p-4 sm:grid-cols-2 sm:p-5">
+
+            {/* MOIS CONCERNÉ */}
+            <label className={label}>
+              <span>Mois concerné <span className={accent}>*</span></span>
               <input type="month" required className={champ} value={moisVersement}
                 onChange={event => definirFormulaire(donnees => ({
-                  ...donnees, mois: event.target.value, montant: "", operationId: crypto.randomUUID()
-                }))} />
+                  ...donnees,
+                  mois: event.target.value,
+                  montant: "",
+                  operationId: crypto.randomUUID()
+                }))}/>
             </label>
 
-            <label className="space-y-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
-              <span>Élève</span>
+            {/* ÉLÈVE */}
+            <label className={label}>
+              <span>Élève <span className={accent}>*</span></span>
               <select className={champ} required disabled={!suiviVersement?.lignes}
                 value={formulaire.eleveId}
-                onChange={event => definirFormulaire(valeur => ({ ...valeur, eleveId: event.target.value }))}>
+                onChange={event => definirFormulaire(valeur => ({
+                  ...valeur, eleveId: event.target.value
+                }))}>
+
                 <option value="">Sélectionner un élève</option>
-                {formulaire.eleveId && !selection && <option value={formulaire.eleveId} hidden>Élève sélectionné</option>}
+
+                {formulaire.eleveId && !selection &&
+                  <option value={formulaire.eleveId} hidden>Élève sélectionné</option>}
+
                 {candidats.map(eleve => <option key={eleve.id} value={eleve.id}>
-                  {eleve.nom} {eleve.prenom} · {eleve.classe}{eleve.matricule && ` · ${eleve.matricule}`}
+                  {eleve.nom} {eleve.prenom} · {eleve.classe}
+                  {eleve.matricule && ` · ${eleve.matricule}`}
                 </option>)}
               </select>
             </label>
 
-            <label className="space-y-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
-              <span>Montant (Ar)</span>
-              <input className={champ} type="number" required min="1" step="1"
-                max={peutPayer ? reste : undefined} disabled={!peutPayer}
+            {/* MONTANT */}
+            <label className={label}>
+              <span>Montant (Ar) <span className={accent}>*</span></span>
+              <input className={`${champ} disabled:cursor-not-allowed disabled:opacity-50`}
+                type="number" required min="1" step="1"
+                max={peutPayer ? reste : undefined}
+                disabled={!peutPayer}
+                placeholder="Saisir le montant"
                 value={formulaire.montant}
-                onChange={event => definirFormulaire(valeur => ({ ...valeur, montant: event.target.value }))} />
+                onChange={event => definirFormulaire(valeur => ({
+                  ...valeur, montant: event.target.value
+                }))}/>
             </label>
 
-            <div className="flex items-end">
-              <div className="w-full rounded-lg bg-slate-50 px-4 py-3 dark:bg-slate-800">
-                <p className="text-xs text-slate-500">Reste à payer</p>
-                <p className="mt-1 text-lg font-bold text-[#540916] dark:text-white">{formatMontant(reste)}</p>
+            {/* RESTE À PAYER */}
+            <div className="flex min-w-0 items-end">
+              <div className={`w-full rounded-xl border bg-[#F8F9FC] px-4 py-3 dark:bg-[#1B2E4A] ${bordure}`}>
+                <p className={`text-xs font-medium ${secondaire}`}>
+                  Reste à payer
+                </p>
+                <p className={`mt-1 text-lg font-bold ${accent}`}>
+                  {formatMontant(reste)}
+                </p>
               </div>
             </div>
 
-            {suiviVersement?.erreur && <p role="alert" className="text-sm text-red-600 sm:col-span-2">{suiviVersement.erreur}</p>}
-            {moisVersement && !suiviVersement && <p role="status" className="text-sm text-slate-500 sm:col-span-2">Chargement du solde…</p>}
-            {selection && !peutPayer && <p className="text-sm text-amber-700 sm:col-span-2">
-              {reste == null ? "Tarif à vérifier" : "Écolage déjà payé pour ce mois."}
+            {/* ERREUR DE CHARGEMENT DU SOLDE */}
+            {suiviVersement?.erreur && <p role="alert"
+              className={`${styleErreur} sm:col-span-2`}>
+              {suiviVersement.erreur}
             </p>}
-            {erreur && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 sm:col-span-2">{erreur}</p>}
+
+            {/* CHARGEMENT DU SOLDE */}
+            {moisVersement && !suiviVersement && <p role="status"
+              className={`flex items-center gap-2 text-sm sm:col-span-2 ${secondaire}`}>
+              <Loader2 size={16} className="animate-spin"/>
+              Chargement du solde...
+            </p>}
+
+            {/* INFORMATION SUR LE SOLDE */}
+            {selection && !peutPayer && <div
+              className="flex items-start gap-2 rounded-lg border border-amber-100 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300 sm:col-span-2">
+              <AlertCircle size={17} className="mt-0.5 shrink-0"/>
+              <span>
+                {reste == null ? "Tarif à vérifier" : "Écolage déjà payé pour ce mois."}
+              </span>
+            </div>}
+
+            {/* ERREUR D'ENREGISTREMENT */}
+            {erreur && <div role="alert"
+              className={`${styleErreur} flex items-start gap-2 sm:col-span-2`}>
+              <AlertCircle size={17} className="mt-0.5 shrink-0"/>
+              <span>{erreur}</span>
+            </div>}
           </fieldset>
 
-          <footer className="flex justify-end gap-2 border-t border-slate-100 px-5 py-4 dark:border-slate-700">
-            <button type="button" disabled={enCours} onClick={() => definirFormulaire(null)}
-              className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+          {/* ACTIONS DU MODAL */}
+          <footer className={`flex shrink-0 flex-wrap justify-end gap-2 border-t p-4 sm:p-5 ${bordure}`}>
+
+            <button type="button" disabled={enCours}
+              onClick={() => definirFormulaire(null)}
+              className={`${bouton} ${contour} flex-1 sm:flex-none`}>
               Annuler
             </button>
-            <button type="submit" disabled={enCours || chargement || !peutPayer}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#540916] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#74172A] disabled:opacity-50">
-              <Save size={16} /> {enCours ? "Enregistrement…" : "Enregistrer le versement"}
+
+            <button type="submit"
+              disabled={enCours || chargement || !peutPayer}
+              className={`${bouton} ${principal} flex-1 sm:flex-none`}>
+              {enCours ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>}
+              {enCours ? "Enregistrement..." : "Enregistrer le versement"}
             </button>
           </footer>
         </form>

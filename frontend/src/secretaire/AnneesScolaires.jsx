@@ -6,7 +6,7 @@ import { lireModule, enregistrerModule } from "../services/stockageDemonstration
 import { exporterExcel, exporterPDF } from "../utilitaires/exportations";
 
 const carte = "rounded-2xl border border-[#EAE3E5] bg-white shadow-sm dark:border-[#263852] dark:bg-[#14243D]";
-const champ = "w-full rounded-xl border border-[#E4E7EC] bg-white px-3 py-2.5 text-sm text-[#171717] outline-none focus:border-[#540916] dark:border-[#33445E] dark:bg-[#0B172B] dark:text-white";
+const champ = "w-full rounded-xl border border-[#E4E7EC] bg-white px-3 py-2.5 text-sm text-[#171717] outline-none focus:border-[#540916] dark:focus:border-[#93C5FD] dark:border-[#33445E] dark:bg-[#0B172B] dark:text-white";
 const bouton = "inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors";
 const trimestres = ["Trimestre 1", "Trimestre 2", "Trimestre 3"];
 const vide = { nom: "", debut: "", fin: "", statut: "Préparation" };
@@ -26,7 +26,7 @@ function Fenetre({ titre, fermer, children }) {
           <h2 className="text-lg font-bold text-[#171717] dark:text-white">{titre}</h2>
           <button type="button" onClick={fermer} className="rounded-lg p-2 text-[#667085] hover:bg-gray-100 dark:hover:bg-[#263852]"><X size={19}/></button>
         </div>
-        <div className="overflow-y-auto p-5">{children}</div>
+        <div className="overflow-y-auto p-3 sm:p-5">{children}</div>
       </div>
     </div>
   );
@@ -74,7 +74,8 @@ export default function AnneesScolaires() {
   }), [annees, recherche, filtre]);
 
   const totalPages = Math.max(1, Math.ceil(anneesFiltrees.length / taillePage));
-  const lignes = anneesFiltrees.slice((page - 1) * taillePage, page * taillePage);
+  const pageActive = Math.min(page, totalPages);
+  const lignes = anneesFiltrees.slice((pageActive - 1) * taillePage, pageActive * taillePage);
 
   useEffect(() => setPage(1), [recherche, filtre]);
 
@@ -110,7 +111,7 @@ export default function AnneesScolaires() {
       text: `L'année ${annee.nom} sera supprimée de la liste.`,
       icon: "warning", showCancelButton: true,
       confirmButtonText: "Supprimer", cancelButtonText: "Annuler",
-      confirmButtonColor: "#B42318"
+      confirmButtonColor: document.documentElement.classList.contains("dark") ? "#29446D" : "#B42318"
     });
     if (!confirmation.isConfirmed) return;
     await enregistrerAnnee(`/annees-scolaires/${encodeURIComponent(annee.id)}`,
@@ -123,7 +124,7 @@ export default function AnneesScolaires() {
       text: "Les autres années seront marquées comme terminées.",
       icon: "question", showCancelButton: true,
       confirmButtonText: "Activer", cancelButtonText: "Annuler",
-      confirmButtonColor: "#540916"
+      confirmButtonColor: document.documentElement.classList.contains("dark") ? "#29446D" : "#540916"
     });
     if (!confirmation.isConfirmed) return;
     await enregistrerAnnee(`/annees-scolaires/${encodeURIComponent(annee.id)}/activation`,
@@ -155,7 +156,7 @@ export default function AnneesScolaires() {
       html: `<b>${concernes.length} élève(s)</b> seront déplacés vers la classe sélectionnée.<br><br>Cette opération modifie les affectations locales et ne constitue pas une clôture officielle.`,
       icon: "warning", showCancelButton: true,
       confirmButtonText: "Confirmer le passage", cancelButtonText: "Annuler",
-      confirmButtonColor: "#540916"
+      confirmButtonColor: document.documentElement.classList.contains("dark") ? "#29446D" : "#540916"
     });
     if (!confirmation.isConfirmed) return;
 
@@ -168,15 +169,15 @@ export default function AnneesScolaires() {
   const listeClasses = [...new Set(classes.map(c => c.nom).filter(Boolean))];
 
   return (
-    <div className="flex h-[calc(100dvh-145px)] min-h-[420px] flex-col gap-4 overflow-hidden">
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+    <div className="flex w-full min-w-0 flex-col gap-4 lg:h-[calc(100dvh-145px)] lg:min-h-[420px]">
+      <div className="flex min-w-0 shrink-0 flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-[#171717] dark:text-white"
             style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>Années scolaires</h1>
           <p className="mt-1 text-sm text-[#667085] dark:text-[#A8B7CF]">Gestion des années, trimestres et passages de classe.</p>
         </div>
         {onglet === "annees" && (
-          <button onClick={() => ouvrirFormulaire(null)} className={`${bouton} bg-[#540916] text-white hover:bg-[#701326]`}>
+          <button onClick={() => ouvrirFormulaire(null)} className={`${bouton} bg-[#540916] text-white hover:bg-[#701326] dark:bg-[#29446D] dark:hover:bg-[#365781]`}>
             <Plus size={17}/> Nouvelle année
           </button>
         )}
@@ -196,15 +197,15 @@ export default function AnneesScolaires() {
       </div>
 
       {onglet === "annees" && (
-        <section className={`${carte} flex min-h-0 flex-1 flex-col overflow-hidden`}>
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#EAE3E5] p-4 dark:border-[#263852]">
-            <div className="relative min-w-[190px] flex-1 sm:max-w-sm">
+        <section className={`${carte} flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden`}>
+          <div className="flex min-w-0 shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#EAE3E5] p-4 dark:border-[#263852]">
+            <div className="relative w-full min-w-0 sm:flex-1 sm:max-w-sm">
               <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#98A2B3]"/>
               <input value={recherche} onChange={e => setRecherche(e.target.value)} placeholder="Rechercher une année..."
                 className={`${champ} pl-10`}/>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <select value={filtre} onChange={e => setFiltre(e.target.value)} className={`${champ} w-auto`}>
+            <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
+              <select value={filtre} onChange={e => setFiltre(e.target.value)} className={`${champ} max-w-full sm:w-auto`}>
                 {["Tous", "Préparation", "Active", "Terminée"].map(x => <option key={x}>{x}</option>)}
               </select>
               <button onClick={() => exporter("excel")} className={`${bouton} border border-[#E4E7EC] text-[#344054] dark:border-[#33445E] dark:text-white`}><Download size={16}/> Excel</button>
@@ -212,38 +213,39 @@ export default function AnneesScolaires() {
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-auto overscroll-contain">
-            <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+          <div className="min-h-0 min-w-0 max-w-full flex-1 overflow-auto overscroll-contain">
+            <table className="w-full min-w-[650px] border-separate border-spacing-0 text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[#F8F9FC] text-xs uppercase text-[#667085] dark:bg-[#0B172B] dark:text-[#A8B7CF]">
                 <tr>
-                  {["Année scolaire", "Date de début", "Date de fin", "Statut", "Actions"].map(t => <th key={t} className="px-5 py-3 font-bold">{t}</th>)}
+                  {["Année scolaire", "Date de début", "Date de fin", "Statut"].map(t => <th key={t} scope="col" className="whitespace-nowrap px-3 py-3 font-bold sm:px-5">{t}</th>)}
+                  <th scope="col" className="sticky right-0 z-20 w-px whitespace-nowrap bg-[#F8F9FC] px-2 py-3 text-right font-bold dark:bg-[#0B172B] sm:px-5">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#F0EAEC] dark:divide-[#263852]">
+              <tbody className="[&>tr>td]:border-b [&>tr>td]:border-[#F0EAEC] dark:[&>tr>td]:border-[#263852]">
                 {lignes.map(a => (
-                  <tr key={a.id} className="hover:bg-[#FAF8F9] dark:hover:bg-[#1B2C46]">
-                    <td className="px-5 py-3 font-semibold text-[#171717] dark:text-white">{a.nom}</td>
-                    <td className="px-5 py-3 text-[#667085] dark:text-[#A8B7CF]">{a.debut || "—"}</td>
-                    <td className="px-5 py-3 text-[#667085] dark:text-[#A8B7CF]">{a.fin || "—"}</td>
-                    <td className="px-5 py-3">
+                  <tr key={a.id} className="group hover:bg-[#FAF8F9] dark:hover:bg-[#1B2C46]">
+                    <td className="px-3 py-3 font-semibold sm:px-5 text-[#171717] dark:text-white">{a.nom}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-[#667085] sm:px-5 dark:text-[#A8B7CF]">{a.debut || "—"}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-[#667085] sm:px-5 dark:text-[#A8B7CF]">{a.fin || "—"}</td>
+                    <td className="whitespace-nowrap px-3 py-3 sm:px-5">
                       <span className={`rounded-full px-3 py-1 text-xs font-bold ${
                         a.statut === "Active" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" :
                         a.statut === "Terminée" ? "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-200" :
                         "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
                       }`}>{a.statut || "Préparation"}</span>
                     </td>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-1">
+                    <td className="sticky right-0 z-[1] w-px whitespace-nowrap bg-white px-2 py-3 text-right group-hover:bg-[#FAF8F9] dark:bg-[#14243D] dark:group-hover:bg-[#1B2C46] sm:px-5">
+                      <div className="flex items-center justify-end gap-0.5 sm:gap-1">
                         <button title="Détails" onClick={() => { setSelection(a); setFenetre("details"); }}
                           className="rounded-lg p-2 text-[#667085] hover:bg-gray-100 dark:hover:bg-[#263852]"><Eye size={17}/></button>
                         <button title="Modifier" onClick={() => ouvrirFormulaire(a)}
-                          className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-[#263852]"><Pencil size={17}/></button>
+                          className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-[#263852]"><Pencil size={17}/></button>
                         {a.statut !== "Active" && (
                           <button title="Activer" onClick={() => activer(a)}
-                            className="rounded-lg p-2 text-green-600 hover:bg-green-50 dark:hover:bg-[#263852]"><CheckCircle2 size={17}/></button>
+                            className="rounded-lg p-2 text-green-600 hover:bg-green-50 dark:text-emerald-300 dark:hover:bg-[#263852]"><CheckCircle2 size={17}/></button>
                         )}
                         <button title="Supprimer" onClick={() => supprimer(a)}
-                          className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:hover:bg-[#263852]"><Trash2 size={17}/></button>
+                          className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:text-slate-300 dark:hover:bg-[#263852]"><Trash2 size={17}/></button>
                       </div>
                     </td>
                   </tr>
@@ -253,21 +255,21 @@ export default function AnneesScolaires() {
             {!lignes.length && <div className="p-12 text-center text-sm text-[#667085]">Aucune année scolaire trouvée.</div>}
           </div>
 
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[#EAE3E5] px-4 py-3 text-xs text-[#667085] dark:border-[#263852] dark:text-[#A8B7CF]">
+          <div className="flex min-w-0 shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[#EAE3E5] px-4 py-3 text-xs text-[#667085] dark:border-[#263852] dark:text-[#A8B7CF]">
             <span>{anneesFiltrees.length} résultat(s) · Page {Math.min(page, totalPages)} / {totalPages}</span>
             <div className="flex gap-2">
-              <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className={`${bouton} border border-[#E4E7EC] disabled:opacity-40 dark:border-[#33445E]`}>Précédent</button>
-              <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className={`${bouton} border border-[#E4E7EC] disabled:opacity-40 dark:border-[#33445E]`}>Suivant</button>
+              <button disabled={pageActive === 1} onClick={() => setPage(pageActive - 1)} className={`${bouton} border border-[#E4E7EC] disabled:opacity-40 dark:border-[#33445E]`}>Précédent</button>
+              <button disabled={pageActive >= totalPages} onClick={() => setPage(pageActive + 1)} className={`${bouton} border border-[#E4E7EC] disabled:opacity-40 dark:border-[#33445E]`}>Suivant</button>
             </div>
           </div>
         </section>
       )}
 
       {onglet === "trimestres" && (
-        <section className={`${carte} min-h-0 flex-1 overflow-y-auto p-5`}>
+        <section className={`${carte} min-h-0 flex-1 overflow-y-auto p-3 sm:p-5`}>
           <h2 className="mb-1 text-lg font-bold text-[#171717] dark:text-white">Périodes trimestrielles</h2>
           <p className="mb-5 text-sm text-[#667085] dark:text-[#A8B7CF]">Les trois trimestres de l'année scolaire.</p>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {trimestres.map((t, i) => (
               <div key={t} className="rounded-xl border border-[#EAE3E5] p-4 dark:border-[#33445E]">
                 <div className="mb-4 flex items-center justify-between">
@@ -285,7 +287,7 @@ export default function AnneesScolaires() {
       )}
 
       {onglet === "passages" && (
-        <section className={`${carte} min-h-0 flex-1 overflow-y-auto p-5`}>
+        <section className={`${carte} min-h-0 flex-1 overflow-y-auto p-3 sm:p-5`}>
           <div className="mb-5">
             <h2 className="text-lg font-bold text-[#171717] dark:text-white">Passage en classe supérieure</h2>
             <p className="mt-1 text-sm text-[#667085] dark:text-[#A8B7CF]">
@@ -293,7 +295,7 @@ export default function AnneesScolaires() {
             </p>
           </div>
 
-          <div className="grid max-w-4xl gap-4 md:grid-cols-3">
+          <div className="grid min-w-0 max-w-4xl gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <label>
               <span className="mb-1.5 block text-xs font-semibold text-[#344054] dark:text-[#A8B7CF]">Année scolaire</span>
               <select value={passage.annee} onChange={e => setPassage(p => ({ ...p, annee: e.target.value }))} className={champ}>
@@ -328,7 +330,7 @@ export default function AnneesScolaires() {
 
           <button onClick={executerPassage}
             disabled={!passage.annee || !passage.source || !passage.destination || normaliser(passage.source) === normaliser(passage.destination)}
-            className={`${bouton} mt-5 bg-[#540916] px-5 py-3 text-white hover:bg-[#701326] disabled:cursor-not-allowed disabled:opacity-40`}>
+            className={`${bouton} mt-5 bg-[#540916] px-5 py-3 text-white hover:bg-[#701326] dark:bg-[#29446D] dark:hover:bg-[#365781] disabled:cursor-not-allowed disabled:opacity-40`}>
             <ArrowRightLeft size={17}/> Confirmer le passage
           </button>
         </section>
@@ -360,9 +362,9 @@ export default function AnneesScolaires() {
                 {["Préparation", "Active", "Terminée"].map(s => <option key={s}>{s}</option>)}
               </select>
             </label>
-            <div className="flex justify-end gap-2 border-t border-[#EAE3E5] pt-4 dark:border-[#263852]">
+            <div className="flex flex-wrap justify-end gap-2 border-t border-[#EAE3E5] pt-4 dark:border-[#263852]">
               <button type="button" onClick={() => setFenetre(null)} className={`${bouton} border border-[#E4E7EC] text-[#344054] dark:border-[#33445E] dark:text-white`}>Annuler</button>
-              <button type="submit" className={`${bouton} bg-[#540916] px-5 text-white hover:bg-[#701326]`}><Save size={16}/> Enregistrer</button>
+              <button type="submit" className={`${bouton} bg-[#540916] px-5 text-white hover:bg-[#701326] dark:bg-[#29446D] dark:hover:bg-[#365781]`}><Save size={16}/> Enregistrer</button>
             </div>
           </form>
         </Fenetre>

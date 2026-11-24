@@ -5,12 +5,12 @@ import { exporterExcel, exporterPDF } from "../utilitaires/exportations";
 
 import { messageErreur, requetePrivee } from "../services/authentification";
 const carte = "rounded-2xl border border-[#EAE3E5] bg-white shadow-sm dark:border-[#263852] dark:bg-[#14243D]";
-const champ = "w-full rounded-xl border border-[#E4E7EC] bg-white px-3 py-2.5 text-sm text-[#171717] outline-none focus:border-[#540916] dark:border-[#33445E] dark:bg-[#0B172B] dark:text-white";
+const champ = "w-full rounded-xl border border-[#E4E7EC] bg-white px-3 py-2.5 text-sm text-[#171717] outline-none focus:border-[#540916] dark:focus:border-[#60A5FA] dark:border-[#33445E] dark:bg-[#0B172B] dark:text-white";
 const bouton = "inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50";
 const cycles = ["Primaire", "Collège", "Lycée"];
 const couleurs = {
   Primaire: "bg-[#EAF0F8] text-[#172B50] dark:bg-[#172B50]/40 dark:text-[#B9D2FF]",
-  Collège: "bg-[#FCECF2] text-[#B84D77] dark:bg-[#D9799A]/20 dark:text-[#F5A9C5]",
+  Collège: "bg-[#FCECF2] text-[#B84D77] dark:bg-violet-500/20 dark:text-violet-300",
   Lycée: "bg-[#E8F6EE] text-[#26865B] dark:bg-[#26865B]/20 dark:text-[#8FE0B2]"
 };
 const vide = { nom: "", cycle: "", niveau: "", capacite: "", description: "" };
@@ -29,7 +29,7 @@ function Fenetre({ titre, fermer, children }) {
       <div className={`${carte} flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden`}>
         <div className="flex items-center justify-between border-b border-[#EAE3E5] px-5 py-4 dark:border-[#263852]">
           <h2 className="text-lg font-bold text-[#171717] dark:text-white">{titre}</h2>
-          <button type="button" onClick={fermer} className="rounded-lg p-2 text-[#667085] hover:bg-gray-100 dark:hover:bg-[#263852]"><X size={19}/></button>
+          <button type="button" onClick={fermer} className="rounded-lg p-2 text-[#667085] hover:bg-gray-100 dark:text-[#A8B7CF] dark:hover:bg-[#263852]"><X size={19}/></button>
         </div>
         <div className="overflow-y-auto p-5">{children}</div>
       </div>
@@ -158,27 +158,27 @@ export default function Classes() {
   };
 
   return (
-    <div className="flex h-[calc(100dvh-145px)] min-h-[420px] flex-col gap-4 overflow-hidden">
+    <div className="flex w-full min-w-0 flex-col gap-4 lg:h-[calc(100dvh-145px)] lg:min-h-[420px] lg:overflow-hidden">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-[#171717] dark:text-white"
             style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>Classes</h1>
           <p className="mt-1 text-sm text-[#667085] dark:text-[#A8B7CF]">Gestion des classes et des niveaux scolaires.</p>
         </div>
-        <button onClick={() => ouvrirFormulaire(null)} className={`${bouton} bg-[#540916] text-white hover:bg-[#701326]`}>
+        <button onClick={() => ouvrirFormulaire(null)} className={`${bouton} bg-[#540916] text-white hover:bg-[#701326] dark:bg-[#29446D] dark:hover:bg-[#365784]`}>
           <Plus size={17}/> Nouvelle classe
         </button>
       </div>
 
-      <section className={`${carte} flex min-h-0 flex-1 flex-col overflow-hidden`}>
+      <section className={`${carte} flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden`}>
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#EAE3E5] p-4 dark:border-[#263852]">
-          <div className="relative min-w-[180px] flex-1 sm:max-w-sm">
+          <div className="relative w-full min-w-0 sm:max-w-sm sm:flex-1">
             <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#98A2B3]"/>
             <input value={recherche} onChange={e => setRecherche(e.target.value)} placeholder="Rechercher une classe..."
               className={`${champ} pl-10`}/>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <select value={cycle} onChange={e => setCycle(e.target.value)} className={`${champ} w-auto`}>
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            <select value={cycle} onChange={e => setCycle(e.target.value)} className={`${champ} !w-auto max-w-full`}>
               <option value="Tous">Tous les cycles</option>
               {cycles.map(c => <option key={c}>{c}</option>)}
             </select>
@@ -194,32 +194,33 @@ export default function Classes() {
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto overscroll-contain">
-          <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+        <div className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain">
+          <table className="w-full min-w-[580px] border-separate border-spacing-0 text-left text-sm">
             <thead className="sticky top-0 z-10 bg-[#F8F9FC] text-xs uppercase text-[#667085] dark:bg-[#0B172B] dark:text-[#A8B7CF]">
               <tr>
-                {["Classe", "Cycle", "Niveau", "Capacité", "Actions"].map(t => <th key={t} className="px-5 py-3 font-bold">{t}</th>)}
+                {["Classe", "Cycle", "Niveau", "Capacité"].map(t => <th key={t} scope="col" className="px-3 py-3 font-bold sm:px-5">{t}</th>)}
+                <th scope="col" className="sticky right-0 z-20 w-[132px] whitespace-nowrap bg-[#F8F9FC] px-3 py-3 text-right font-bold dark:bg-[#0B172B] sm:px-5">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F0EAEC] dark:divide-[#263852]">
               {!chargement && lignes.map(c => (
-                <tr key={identifiant(c)} className="hover:bg-[#FAF8F9] dark:hover:bg-[#1B2C46]">
-                  <td className="px-5 py-3 font-bold text-[#171717] dark:text-white">{c.nom || "—"}</td>
-                  <td className="px-5 py-3">
+                <tr key={identifiant(c)} className="group hover:bg-[#FAF8F9] dark:hover:bg-[#1B2C46]">
+                  <td className="px-3 py-3 sm:px-5 font-bold text-[#171717] dark:text-white">{c.nom || "—"}</td>
+                  <td className="px-3 py-3 sm:px-5">
                     <span className={`rounded-full px-3 py-1 text-xs font-bold ${couleurs[c.cycle] || "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-white"}`}>
                       {c.cycle || "Non défini"}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-[#667085] dark:text-[#A8B7CF]">{c.niveau || "—"}</td>
-                  <td className="px-5 py-3 text-[#667085] dark:text-[#A8B7CF]">{c.capacite ?? "—"}</td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-1">
-                      <button title="Détails" onClick={() => { setSelection(c); setFenetre("details"); }}
-                        className="rounded-lg p-2 text-[#667085] hover:bg-gray-100 dark:hover:bg-[#263852]"><Eye size={17}/></button>
-                      <button title="Modifier" onClick={() => ouvrirFormulaire(c)}
-                        className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-[#263852]"><Pencil size={17}/></button>
-                      <button title="Supprimer" onClick={() => supprimer(c)}
-                        className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:hover:bg-[#263852]"><Trash2 size={17}/></button>
+                  <td className="px-3 py-3 sm:px-5 text-[#667085] dark:text-[#A8B7CF]">{c.niveau || "—"}</td>
+                  <td className="px-3 py-3 sm:px-5 text-[#667085] dark:text-[#A8B7CF]">{c.capacite ?? "—"}</td>
+                  <td className="sticky right-0 z-[1] w-[132px] whitespace-nowrap bg-white px-3 py-3 text-right group-hover:bg-[#FAF8F9] dark:bg-[#14243D] dark:group-hover:bg-[#1B2C46] sm:px-5">
+                    <div className="flex items-center justify-end gap-1">
+                      <button title="Détails" aria-label="Détails" onClick={() => { setSelection(c); setFenetre("details"); }}
+                        className="rounded-lg p-2 text-[#667085] hover:bg-gray-100 dark:text-[#A8B7CF] dark:hover:bg-[#263852]"><Eye size={17}/></button>
+                      <button title="Modifier" aria-label="Modifier" onClick={() => ouvrirFormulaire(c)}
+                        className="rounded-lg p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-[#263852]"><Pencil size={17}/></button>
+                      <button title="Supprimer" aria-label="Supprimer" onClick={() => supprimer(c)}
+                        className="rounded-lg p-2 text-red-600 hover:bg-red-50 dark:text-slate-300 dark:hover:bg-[#263852]"><Trash2 size={17}/></button>
                     </div>
                   </td>
                 </tr>
@@ -234,9 +235,9 @@ export default function Classes() {
           )}
           {!chargement && erreur && (
             <div className="p-10 text-center">
-              <p className="text-sm font-semibold text-red-600">Impossible de charger les classes.</p>
+              <p className="text-sm font-semibold text-red-600 dark:text-slate-200">Impossible de charger les classes.</p>
               <p className="mt-2 text-xs text-[#667085] dark:text-[#A8B7CF]">{erreur}</p>
-              <button onClick={charger} className={`${bouton} mt-4 bg-[#540916] text-white`}>Réessayer</button>
+              <button onClick={charger} className={`${bouton} mt-4 bg-[#540916] text-white dark:bg-[#29446D]`}>Réessayer</button>
             </div>
           )}
           {!chargement && !erreur && !lignes.length && (
@@ -296,7 +297,7 @@ export default function Classes() {
             <div className="flex justify-end gap-2 border-t border-[#EAE3E5] pt-4 dark:border-[#263852]">
               <button type="button" disabled={enCours} onClick={() => setFenetre(null)}
                 className={`${bouton} border border-[#E4E7EC] text-[#344054] dark:border-[#33445E] dark:text-white`}>Annuler</button>
-              <button type="submit" disabled={enCours} className={`${bouton} bg-[#540916] px-5 text-white hover:bg-[#701326]`}>
+              <button type="submit" disabled={enCours} className={`${bouton} bg-[#540916] px-5 text-white hover:bg-[#701326] dark:bg-[#29446D] dark:hover:bg-[#365784]`}>
                 {enCours ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>}
                 Enregistrer
               </button>
